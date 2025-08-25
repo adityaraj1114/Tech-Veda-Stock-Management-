@@ -15,12 +15,18 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // 🟢 Signup (naya user register karega)
+
   const signup = (email, password, shopName) => {
-    const newUser = { email, password, shopName };
-    localStorage.setItem("user", JSON.stringify(newUser)); // store registered user
-    return { success: true, message: "Signup successful. Please login." };
-  };
+  const existing = localStorage.getItem("user");
+  if (existing) {
+    return { success: false, message: "User already exists. Please login." };
+  }
+
+  const newUser = { email, password, shopName };
+  localStorage.setItem("user", JSON.stringify(newUser));
+  return { success: true, message: "Signup successful. Please login." };
+};
+
 
   // 🟢 Login (session create karega)
   const login = (email, password) => {
