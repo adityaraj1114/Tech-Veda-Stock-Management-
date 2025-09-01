@@ -2,25 +2,34 @@ import React, { useContext, useState } from "react";
 import { InventoryContext } from "../context/InventoryContext";
 
 export default function Purchases() {
-  // const { purchases, addPurchase } = useContext(InventoryContext);
   const { purchases, addPurchase, deletePurchase } = useContext(InventoryContext);
 
   const [supplier, setSupplier] = useState("");
   const [item, setItem] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [cost, setCost] = useState(""); // per unit cost
+  const [cost, setCost] = useState("");
   const [search, setSearch] = useState("");
   const [filterMin, setFilterMin] = useState("");
   const [filterMax, setFilterMax] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+
+  const itemsPerPage = 30;
+
+  const capitalizeWords = (str) =>
+    str
+      .trim()
+      .split(" ")
+      .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+      .join(" ");
 
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!supplier || !item || !cost || !quantity) return;
 
     addPurchase({
-      supplier: supplier.trim(),
-      item: item.trim(),
-      cost: parseFloat(cost), // ✅ yahan cost bhejna hai
+      supplier: capitalizeWords(supplier),
+      item: capitalizeWords(item),
+      cost: parseFloat(cost),
       quantity: parseInt(quantity),
     });
 
@@ -30,16 +39,25 @@ export default function Purchases() {
     setCost("");
   };
 
-  // Filtered Data
-  const filteredPurchases = purchases.filter((p) => {
-    const matchesSearch =
-      p.supplier.toLowerCase().includes(search.toLowerCase()) ||
-      p.item.toLowerCase().includes(search.toLowerCase());
-    const withinRange =
-      (!filterMin || p.totalCost >= parseFloat(filterMin)) &&
-      (!filterMax || p.totalCost <= parseFloat(filterMax));
-    return matchesSearch && withinRange;
-  });
+  // Filter + Sort (latest first)
+  const filteredPurchases = [...purchases]
+    .reverse()
+    .filter((p) => {
+      const matchesSearch =
+        p.supplier.toLowerCase().includes(search.toLowerCase()) ||
+        p.item.toLowerCase().includes(search.toLowerCase());
+      const withinRange =
+        (!filterMin || p.totalCost >= parseFloat(filterMin)) &&
+        (!filterMax || p.totalCost <= parseFloat(filterMax));
+      return matchesSearch && withinRange;
+    });
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredPurchases.length / itemsPerPage);
+  const paginatedPurchases = filteredPurchases.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
     <div className="container mt-4">
@@ -98,7 +116,10 @@ export default function Purchases() {
             className="form-control"
             placeholder="🔍 Search by Supplier or Item"
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         <div className="col-md">
@@ -107,7 +128,10 @@ export default function Purchases() {
             className="form-control"
             placeholder="Min Total Cost"
             value={filterMin}
-            onChange={(e) => setFilterMin(e.target.value)}
+            onChange={(e) => {
+              setFilterMin(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
         <div className="col-md">
@@ -116,7 +140,10 @@ export default function Purchases() {
             className="form-control"
             placeholder="Max Total Cost"
             value={filterMax}
-            onChange={(e) => setFilterMax(e.target.value)}
+            onChange={(e) => {
+              setFilterMax(e.target.value);
+              setCurrentPage(1);
+            }}
           />
         </div>
       </div>
@@ -137,31 +164,29 @@ export default function Purchases() {
             </tr>
           </thead>
           <tbody>
-            {filteredPurchases.length > 0 ? (
-              <>
-                {filteredPurchases.map((p, i) => (
-                  <tr key={i}>
-                    <td>{i + 1}</td>
-                    <td>{p.date}</td>
-                    <td>{p.supplier}</td>
-                    <td>{p.item}</td>
-                    <td>{p.quantity}</td>
-                    <td>₹{p.cost}</td>
-                    <td className="fw-bold text-danger">₹{p.totalCost}</td>
-                    <td>
-                      <button
-                        onClick={() => deletePurchase(p.id)} // ✅ correct
-                        className="btn btn-sm btn-danger"
-                      >
-                        ❌ Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </>
+            {paginatedPurchases.length > 0 ? (
+              paginatedPurchases.map((p, i) => (
+                <tr key={p.id || i}>
+                  <td>{(currentPage - 1) * itemsPerPage + i + 1}</td>
+                  <td>{p.date}</td>
+                  <td>{capitalizeWords(p.supplier)}</td>
+                  <td>{capitalizeWords(p.item)}</td>
+                  <td>{p.quantity}</td>
+                  <td>₹{p.cost}</td>
+                  <td className="fw-bold text-danger">₹{p.totalCost}</td>
+                  <td>
+                    <button
+                      onClick={() => deletePurchase(p.id)}
+                      className="btn btn-sm btn-danger"
+                    >
+                      ❌ Delete
+                    </button>
+                  </td>
+                </tr>
+              ))
             ) : (
               <tr>
-                <td colSpan="7" className="text-center text-muted">
+                <td colSpan="8" className="text-center text-muted">
                   No purchases found 🚫
                 </td>
               </tr>
@@ -169,6 +194,29 @@ export default function Purchases() {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="d-flex justify-content-center mt-3">
+          <nav>
+            <ul className="pagination">
+              {[...Array(totalPages)].map((_, i) => (
+                <li
+                  key={i}
+                  className={`page-item ${currentPage === i + 1 ? "active" : ""}`}
+                >
+                  <button
+                    className="page-link"
+                    onClick={() => setCurrentPage(i + 1)}
+                  >
+                    {i + 1}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        </div>
+      )}
     </div>
   );
 }

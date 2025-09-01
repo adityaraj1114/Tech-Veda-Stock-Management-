@@ -1,26 +1,40 @@
-// src/context/InventoryContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-const InventoryContext = createContext();
+const InventoryContext = createContext({
+  sales: [],
+  purchases: [],
+  customers: [],
+  addSale: () => {},
+  addPurchase: () => {},
+  addCustomer: () => {},
+  deleteCustomer: () => {},
+  recordPayment: () => {},
+  deleteSale: () => {},
+  deletePurchase: () => {},
+  deleteStockItem: () => {},
+  resetData: () => {},
+  getInventory: () => [],
+  getProfitLoss: () => ({}),
+  getTransactions: () => [],
+});
 
-// ✅ Safe JSON parse helper
 const safeParse = (key) => {
   try {
-    const saved = localStorage.getItem(key);
-    const parsed = saved ? JSON.parse(saved) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (e) {
-    console.error("Invalid data in localStorage for:", key, e);
+    const raw = localStorage.getItem(key);
+    const data = raw ? JSON.parse(raw) : [];
+    return Array.isArray(data) ? data : [];
+  } catch {
     return [];
   }
 };
 
 export const InventoryProvider = ({ children }) => {
-  // ✅ Load safely from localStorage
+  // Initialize from localStorage
   const [sales, setSales] = useState(() => safeParse("sales"));
   const [purchases, setPurchases] = useState(() => safeParse("purchases"));
+  const [customers, setCustomers] = useState(() => safeParse("customers"));
 
-  // ✅ Save to localStorage on change
+  // Persist to localStorage
   useEffect(() => {
     localStorage.setItem("sales", JSON.stringify(sales));
   }, [sales]);
@@ -29,106 +43,216 @@ export const InventoryProvider = ({ children }) => {
     localStorage.setItem("purchases", JSON.stringify(purchases));
   }, [purchases]);
 
-  // ✅ Add Purchase
+  useEffect(() => {
+    localStorage.setItem("customers", JSON.stringify(customers));
+  }, [customers]);
+
+  // Add a new purchase
   const addPurchase = ({ supplier, item, quantity, cost }) => {
     setPurchases((prev) => [
       ...prev,
       {
         id: Date.now(),
-        supplier,
+        supplier: supplier.trim(),
         item: item.trim(),
-        quantity: parseInt(quantity),
+        quantity: parseInt(quantity, 10),
         cost: parseFloat(cost),
-        totalCost: parseInt(quantity) * parseFloat(cost),
+        totalCost: parseInt(quantity, 10) * parseFloat(cost),
         date: new Date().toLocaleString(),
       },
     ]);
   };
 
-  // ✅ Add Sale
+  // Add a new sale
   const addSale = (saleData) => {
     if (saleData.items) {
-      // multiple items (from cart)
       const { customer, items } = saleData;
-      const salesArray = items.map((item) => ({
+      const batch = items.map((it) => ({
         id: Date.now() + Math.random(),
-        customer,
-        product: item.product,
-        quantity: item.qty ?? item.quantity, // ✅ handle both qty/quantity
-        unitPrice: item.price ?? item.unitPrice,
-        totalAmount: item.total,
+        customer: customer.trim(),
+        product: it.product.trim(),
+        quantity: it.qty ?? it.quantity,
+        unitPrice: it.price ?? it.unitPrice,
+        totalAmount: it.total,
         date: new Date().toLocaleString(),
       }));
-      setSales((prev) => [...prev, ...salesArray]);
+      setSales((prev) => [...prev, ...batch]);
+
+      // Update customer ledger
+      updateCustomerLedger(customer, batch.reduce((s, i) => s + i.totalAmount, 0));
     } else {
-      // single sale
-      setSales((prev) => [
-        ...prev,
-        {
-          id: Date.now(),
-          customer: saleData.customer,
-          product: saleData.product,
-          quantity: saleData.quantity,
-          unitPrice: saleData.unitPrice,
-          totalAmount: saleData.totalAmount,
-          date: new Date().toLocaleString(),
-        },
-      ]);
+      const newSale = {
+        id: Date.now(),
+        customer: saleData.customer.trim(),
+        product: saleData.product.trim(),
+        quantity: saleData.quantity,
+        unitPrice: saleData.unitPrice,
+        totalAmount: saleData.totalAmount,
+        date: new Date().toLocaleString(),
+      };
+      setSales((prev) => [...prev, newSale]);
+
+      // Update customer ledger
+      updateCustomerLedger(saleData.customer, newSale.totalAmount);
     }
   };
 
-  // ✅ Delete functions
-  const deletePurchase = (id) => {
-    setPurchases((prev) => prev.filter((p) => p.id !== id));
-  };
-
-  const deleteSale = (id) => {
-    setSales((prev) => prev.filter((s) => s.id !== id));
-  };
-
-  // ✅ Inventory Calculation
-  const getInventory = () => {
-    const stock = {};
-
-    // Purchases
-    (Array.isArray(purchases) ? purchases : []).forEach((p) => {
-      if (!stock[p.item]) {
-        stock[p.item] = { purchased: 0, sold: 0 };
-      }
-      stock[p.item].purchased += p.quantity || 0;
-    });
-
-    // Sales
-    (Array.isArray(sales) ? sales : []).forEach((s) => {
-      if (!stock[s.product]) {
-        stock[s.product] = { purchased: 0, sold: 0 };
-      }
-      stock[s.product].sold += s.quantity || 0;
-    });
-
-    return Object.entries(stock).map(([item, data]) => ({
-      item,
-      purchased: data.purchased,
-      sold: data.sold,
-      inStock: data.purchased - data.sold,
-    }));
-  };
-
-  // ✅ Profit/Loss Calculation
-  const getProfitLoss = () => {
-    const totalPurchase = (Array.isArray(purchases) ? purchases : []).reduce(
-      (sum, p) => sum + (p.totalCost || 0),
-      0
-    );
-    const totalSales = (Array.isArray(sales) ? sales : []).reduce(
-      (sum, s) => sum + (s.totalAmount || 0),
-      0
-    );
-    return {
-      totalPurchase,
-      totalSales,
-      profit: totalSales - totalPurchase,
+  // Add customer manually
+  const addCustomer = (custData) => {
+    const newCustomer = {
+      id: Date.now(),
+      name: custData.name.trim(),
+      billingAddress: custData.billingAddress || "",
+      shippingAddress: custData.shippingAddress || "",
+      contactPhone: custData.contactPhone || "",
+      gstin: custData.gstin || "",
+      totalPurchase: parseFloat(custData.totalPurchase || 0),
+      paidAmount: parseFloat(custData.paidAmount || 0),
+      pendingAmount:
+        parseFloat(custData.totalPurchase || 0) -
+        parseFloat(custData.paidAmount || 0),
     };
+    setCustomers((prev) => [...prev, newCustomer]);
+  };
+
+  // Delete customer
+  const deleteCustomer = (id) => {
+    if (window.confirm("Delete this customer?")) {
+      setCustomers((prev) => prev.filter((c) => c.id !== id));
+    }
+  };
+
+  // Update customer ledger when new sale happens
+  const updateCustomerLedger = (customerName, amount) => {
+    setCustomers((prev) => {
+      const existing = prev.find((c) => c.name === customerName);
+      if (existing) {
+        return prev.map((c) =>
+          c.name === customerName
+            ? {
+                ...c,
+                totalPurchase: c.totalPurchase + amount,
+                pendingAmount: c.pendingAmount + amount,
+              }
+            : c
+        );
+      } else {
+        return [
+          ...prev,
+          {
+            id: Date.now(),
+            name: customerName,
+            totalPurchase: amount,
+            paidAmount: 0,
+            pendingAmount: amount,
+          },
+        ];
+      }
+    });
+  };
+
+  // Record a payment
+  const recordPayment = (custId, amount) => {
+    setCustomers((prev) =>
+      prev.map((c) =>
+        c.id === custId
+          ? {
+              ...c,
+              paidAmount: c.paidAmount + amount,
+              pendingAmount: Math.max(c.pendingAmount - amount, 0),
+            }
+          : c
+      )
+    );
+  };
+
+  // Delete purchase
+  const deletePurchase = (id) => {
+    if (window.confirm("Delete this purchase?")) {
+      setPurchases((prev) => prev.filter((p) => p.id !== id));
+    }
+  };
+
+  // Delete sale
+  const deleteSale = (id) => {
+    if (window.confirm("Delete this sale?")) {
+      setSales((prev) => prev.filter((s) => s.id !== id));
+    }
+  };
+
+  // Delete all records of one stock item
+  const deleteStockItem = (itemName) => {
+    if (window.confirm(`Delete all purchase & sale records for "${itemName}"?`)) {
+      setPurchases((prev) => prev.filter((p) => p.item !== itemName));
+      setSales((prev) => prev.filter((s) => s.product !== itemName));
+    }
+  };
+
+  // Reset all data
+  const resetData = () => {
+    if (window.confirm("This will permanently delete ALL data. Continue?")) {
+      setSales([]);
+      setPurchases([]);
+      setCustomers([]);
+      localStorage.removeItem("sales");
+      localStorage.removeItem("purchases");
+      localStorage.removeItem("customers");
+    }
+  };
+
+  // Compute inventory
+  const getInventory = () => {
+    const stockMap = {};
+
+    purchases.forEach((p) => {
+      if (!stockMap[p.item]) {
+        stockMap[p.item] = { purchased: 0, sold: 0, costSum: 0 };
+      }
+      stockMap[p.item].purchased += p.quantity;
+      stockMap[p.item].costSum += p.quantity * p.cost;
+    });
+
+    sales.forEach((s) => {
+      if (!stockMap[s.product]) {
+        stockMap[s.product] = { purchased: 0, sold: 0, costSum: 0 };
+      }
+      stockMap[s.product].sold += s.quantity;
+    });
+
+    return Object.entries(stockMap).map(([item, data]) => {
+      const unitPrice = data.purchased > 0 ? data.costSum / data.purchased : 0;
+      const inStock = data.purchased - data.sold;
+      const totalValue = unitPrice * inStock;
+      return { item, purchased: data.purchased, sold: data.sold, unitPrice, inStock, totalValue };
+    });
+  };
+
+  // Profit & Loss
+  const getProfitLoss = () => {
+    const totalPurchase = purchases.reduce((sum, p) => sum + (p.totalCost || 0), 0);
+    const totalSales = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+    return { totalPurchase, totalSales, profit: totalSales - totalPurchase };
+  };
+
+  // Combined transactions
+  const getTransactions = () => {
+    const combined = [
+      ...purchases.map((p) => ({
+        id: p.id,
+        date: p.date,
+        type: "Purchase",
+        details: `${p.supplier} supplied ${p.quantity} × ${p.item}`,
+        amount: p.totalCost,
+      })),
+      ...sales.map((s) => ({
+        id: s.id,
+        date: s.date,
+        type: "Sale",
+        details: `${s.customer} bought ${s.quantity} × ${s.product}`,
+        amount: s.totalAmount,
+      })),
+    ];
+    return combined.sort((a, b) => b.id - a.id);
   };
 
   return (
@@ -136,12 +260,19 @@ export const InventoryProvider = ({ children }) => {
       value={{
         sales,
         purchases,
+        customers,
         addSale,
         addPurchase,
+        addCustomer,
+        deleteCustomer,
+        recordPayment,
         deleteSale,
         deletePurchase,
+        deleteStockItem,
+        resetData,
         getInventory,
         getProfitLoss,
+        getTransactions,
       }}
     >
       {children}
@@ -149,6 +280,5 @@ export const InventoryProvider = ({ children }) => {
   );
 };
 
-// ✅ Export context + custom hook
-export { InventoryContext };
 export const useInventory = () => useContext(InventoryContext);
+export { InventoryContext };

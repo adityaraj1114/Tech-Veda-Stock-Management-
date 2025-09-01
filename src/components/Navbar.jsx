@@ -51,14 +51,23 @@ const Navbar = () => {
             <li className="nav-item">
               <Link className="nav-link" to="/dashboard" onClick={closeNavbar}>Dashboard</Link>
             </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/stock" onClick={closeNavbar}>Stock</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/customerlist" onClick={closeNavbar}>Customer List</Link>
+            </li>
             {/* <li className="nav-item">
-              <Link className="nav-link" to="/customer" onClick={closeNavbar}>Customer</Link>
+              <Link className="nav-link" to="/customer" onClick={closeNavbar}>Customers</Link>
             </li> */}
             <li className="nav-item">
               <Link className="nav-link" to="/purchase" onClick={closeNavbar}>Purchase</Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/sale" onClick={closeNavbar}>Sale</Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/profile" onClick={closeNavbar}>Profile</Link>
             </li>
           </ul>
 

@@ -51,6 +51,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem("loggedInUser");
     localStorage.removeItem("token");
     setUser(null);
+    // navigate("/login");
   };
 
   // 🟢 isAuthenticated flag

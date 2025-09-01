@@ -1,68 +1,107 @@
 // src/App.jsx
 import React from "react";
 import { Routes, Route } from "react-router-dom";
+
 import Signup from "./pages/SignUp";
 import Login from "./pages/Login";
 import Navbar from "./components/Navbar";
+import Dashboard from "./pages/Dashboard";
+import Stock from "./pages/Stock";
 import Purchase from "./pages/Purchase";
 import Sale from "./pages/Sale";
-import Dashboard from "./pages/Dashboard";
-import PrivateRoute from "./components/PrivateRoute";
+import Profile from "./pages/Profile";
+import CustomerList from "./pages/CustomerList";
+import CustomerDetails from "./pages/CustomerDetails";
+
+import PrivateRoute from "./routes/PrivateRoute";
+
 import { AuthProvider } from "./context/AuthContext";
-import { InventoryProvider } from "./context/InventoryContext"; // ✅ Add this
-import Customer from "./pages/Customer";
+import { InventoryProvider } from "./context/InventoryContext";
+import { ProfileProvider } from "./context/ProfileContext";
 
 function App() {
   return (
     <AuthProvider>
       <InventoryProvider>
-        {/* ✅ Navbar ko AuthContext + InventoryContext dono se data milega */}
-        <Navbar />
+        <ProfileProvider>
+          {/* Navbar now has access to Auth, Inventory & Profile contexts */}
+          <Navbar />
 
-        <div className="container py-4">
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/signup" element={<Signup />} />
-            <Route path="/login" element={<Login />} />
+          <div className="container py-4">
+            <Routes>
+              {/* Public */}
+              <Route path="/signup" element={<Signup />} />
+              <Route path="/login" element={<Login />} />
 
-            {/* Protected Routes */}
-            <Route
-              path="/dashboard"
-              element={
-                <PrivateRoute>
-                  <Dashboard />
-                </PrivateRoute>
-              }
-            />
-            {/* <Route
-              path="/customer"
-              element={
-                <PrivateRoute>
-                  <Customer />
-                </PrivateRoute>
-              }
-            /> */}
-            <Route
-              path="/sale"
-              element={
-                <PrivateRoute>
-                  <Sale />
-                </PrivateRoute>
-              }
-            />
-            <Route
-              path="/purchase"
-              element={
-                <PrivateRoute>
-                  <Purchase />
-                </PrivateRoute>
-              }
-            />
+              {/* Protected */}
+              <Route
+                path="/dashboard"
+                element={
+                  <PrivateRoute>
+                    <Dashboard />
+                  </PrivateRoute>
+                }
+              />
 
-            {/* Default fallback */}
-            <Route path="*" element={<Login />} />
-          </Routes>
-        </div>
+              <Route
+                path="/profile"
+                element={
+                  <PrivateRoute>
+                    <Profile />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/stock"
+                element={
+                  <PrivateRoute>
+                    <Stock />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/customerlist"
+                element={
+                  <PrivateRoute>
+                    <CustomerList />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/customers/:id"
+                element={
+                  <PrivateRoute>
+                    <CustomerDetails />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/purchase"
+                element={
+                  <PrivateRoute>
+                    <Purchase />
+                  </PrivateRoute>
+                }
+              />
+
+              <Route
+                path="/sale"
+                element={
+                  <PrivateRoute>
+                    <Sale />
+                  </PrivateRoute>
+                }
+              />
+
+              {/* Fallback */}
+              <Route path="*" element={<Login />} />
+            </Routes>
+          </div>
+        </ProfileProvider>
       </InventoryProvider>
     </AuthProvider>
   );
