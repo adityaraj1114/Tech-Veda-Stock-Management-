@@ -49,9 +49,9 @@ export default function CustomerDetails() {
   const pending = totalPurchased - paid;
 
   return (
-    <div className="container mt-4">
-      <div className="card shadow p-4">
-        <h2 className="mb-3">📋 Customer Details</h2>
+    <div className="container mt-1">
+      <div className="card shadow p-2">
+        <h2 className="mb-3 pt-3">📋 Customer Details</h2>
 
         {/* Customer Info */}
         <div className="card mb-4 p-3 bg-light border">

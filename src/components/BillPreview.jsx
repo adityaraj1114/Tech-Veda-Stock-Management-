@@ -30,7 +30,7 @@ export default function BillPreview({
     <>
       <div
         id={`bill_${currentTx.id}`}
-        className="border bg-white p-2 mb-4 shadow mt-5"
+        className="border bg-white pt-3 p-2 mb-4 shadow mt-5"
         style={{ maxWidth: "800px", margin: "auto" }}
       >
         {/* ✅ Shop Details Header */}
