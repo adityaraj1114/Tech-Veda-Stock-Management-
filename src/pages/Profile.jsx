@@ -69,7 +69,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="container mt-4">
+    <div className="container rounded">
       <ProfilePreview
         form={form}
         editing={editing}

@@ -1,53 +1,52 @@
 import React from "react";
 
-export default function ProfilePreview({
-  form,
-  editing,
-  previewVisible,
-  onEdit,
-}) {
+export default function ProfilePreview({ form, editing, previewVisible, onEdit }) {
   if (!previewVisible) return null;
 
-  return (
-    <div
-      id="profile-preview"
-      className="border p-4 mb-4"
-      style={{
-        width: "210mm",
-        margin: "0 auto 1.5rem",
-        background: "white",
-        boxShadow: "0 0 5px rgba(0,0,0,0.2)",
-      }}
-    >
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        {form.logo && (
-          <img
-            src={form.logo}
-            alt="Logo"
-            style={{ height: 80, objectFit: "contain" }}
-          />
-        )}
-        <div className="flex-grow-1 px-4">
-          <h2 className="mb-1">{form.shopName}</h2>
-          <p className="mb-0">Owner: {form.ownerName}</p>
-          <p className="mb-0">
-            {form.addressLine1}
-            {form.addressLine2 && `, ${form.addressLine2}`}
-          </p>
-          <p className="mb-0">
-            {form.city}, {form.state} – {form.pincode}
-          </p>
-          <p className="mb-0">
-            GSTIN: {form.gstin} | PAN: {form.pan}
-          </p>
-        </div>
+  const containerStyle = {
+    maxWidth: "100%",
+    margin: "0 auto 1.5rem",
+    padding: "2rem",
+    borderRadius: "12px",
+    background: "linear-gradient(135deg, #0f2027, #2c5364, #ff6e7f)",
+    color: "white",
+    boxShadow: "0 0 10px rgba(0,0,0,0.3)",
+    textAlign: "center",
+  };
 
-        {!editing && (
-          <button className="btn btn-outline-primary" onClick={onEdit}>
-            ✏️ Edit
-          </button>
-        )}
-      </div>
+  const logoStyle = {
+    height: 100,
+    width: 100,
+    borderRadius: "50%",
+    objectFit: "cover",
+    backgroundColor: "white",
+    padding: "0.5rem",
+    marginBottom: "1rem",
+    boxShadow: "0 0 8px rgba(255,255,255,0.3)",
+  };
+
+  const label = (text) => <strong style={{ color: "#ffd700" }}>{text}</strong>;
+
+  return (
+    <div id="profile-preview" style={containerStyle}>
+      {form.logo && (
+        <img src={form.logo} alt="Logo" style={logoStyle} />
+      )}
+      <h2 className="mb-2">{form.shopName}</h2>
+      <p>{label("Owner")}: {form.ownerName}</p>
+      <p>{label("Address")}: {form.addressLine1}{form.addressLine2 && `, ${form.addressLine2}`}</p>
+      <p>{form.city}, {form.state} – {form.pincode}</p>
+      {form.gstin && <p>{label("GSTIN")}: {form.gstin}</p>}
+      {form.pan && <p>{label("PAN")}: {form.pan}</p>}
+      {form.phone && <p>{label("Phone")}: {form.phone}</p>}
+      {form.email && <p>{label("Email")}: {form.email}</p>}
+      {form.website && <p>{label("Website")}: {form.website}</p>}
+
+      {!editing && (
+        <button className="btn btn-light mt-3" onClick={onEdit}>
+          ✏️ Edit Profile
+        </button>
+      )}
     </div>
   );
 }

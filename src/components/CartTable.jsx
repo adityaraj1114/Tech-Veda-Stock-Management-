@@ -1,45 +1,8 @@
-import React, { useState } from "react";
-import html2pdf from "html2pdf.js";
-import PdfDownloader from "../components/PdfDownloader";
+// src/components/CartTable.jsx
+import React from "react";
 
-const CartTable = ({ cart, removeFromCart, handleFinalizeSale, customer }) => {
-  const [showBill, setShowBill] = useState(false);
-
+const CartTable = ({ cart, removeFromCart, handleFinalizeSale }) => {
   const grandTotal = cart.reduce((sum, item) => sum + item.total, 0);
-
-  const generateBillText = () => {
-    let bill = `🧾 Bill for ${customer}\n\n`;
-    cart.forEach((item, i) => {
-      bill += `${i + 1}. ${item.product} x${item.quantity} @₹${
-        item.unitPrice
-      } = ₹${item.total}\n`;
-    });
-    bill += `\nTOTAL = ₹${grandTotal}`;
-    return bill;
-  };
-
-  const shareOnWhatsApp = () => {
-    const billText = generateBillText();
-    const url = `https://wa.me/?text=${encodeURIComponent(billText)}`;
-    window.open(url, "_blank");
-  };
-
-    const downloadPDF = () => {
-      const element = document.getElementById("bill-preview");
-      const opt = {
-        margin: 0.5,
-        filename: `Bill_${customer}_${Date.now()}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-      };
-      window.html2pdf().set(opt).from(element).save();
-    };
-
-  const finalizeAndShowBill = () => {
-    handleFinalizeSale();
-    setShowBill(true);
-  };
 
   return (
     <div className="mb-3">
@@ -76,13 +39,14 @@ const CartTable = ({ cart, removeFromCart, handleFinalizeSale, customer }) => {
         </tbody>
       </table>
 
+      {/* Grand Total */}
+      <div className="text-end fw-bold mb-2">Total: ₹{grandTotal}</div>
+
       <div className="d-flex gap-2">
-        <button onClick={finalizeAndShowBill} className="btn btn-success">
+        <button onClick={handleFinalizeSale} className="btn btn-success">
           ✅ Finalize Sale
         </button>
       </div>
-
-
     </div>
   );
 };

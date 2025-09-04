@@ -37,3 +37,4 @@ export function ProfileProvider({ children }) {
 
 // Custom hook
 export const useProfile = () => useContext(ProfileContext);
+

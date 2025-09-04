@@ -19,7 +19,7 @@ export default function ProfileForm({
         <input
           name="ownerName"
           className="form-control"
-          value={form.ownerName}
+          value={form.ownerName ?? ""}
           onChange={onChange}
           required
           disabled={disabled}
@@ -30,7 +30,7 @@ export default function ProfileForm({
         <input
           name="shopName"
           className="form-control"
-          value={form.shopName}
+          value={form.shopName ?? ""}
           onChange={onChange}
           required
           disabled={disabled}
@@ -43,7 +43,7 @@ export default function ProfileForm({
         <input
           name="addressLine1"
           className="form-control"
-          value={form.addressLine1}
+          value={form.addressLine1 ?? ""}
           onChange={onChange}
           required
           disabled={disabled}
@@ -54,7 +54,7 @@ export default function ProfileForm({
         <input
           name="addressLine2"
           className="form-control"
-          value={form.addressLine2}
+          value={form.addressLine2 ?? ""}
           onChange={onChange}
           disabled={disabled}
         />
@@ -64,7 +64,7 @@ export default function ProfileForm({
         <input
           name="city"
           className="form-control"
-          value={form.city}
+          value={form.city ?? ""}
           onChange={onChange}
           required
           disabled={disabled}
@@ -75,7 +75,7 @@ export default function ProfileForm({
         <input
           name="state"
           className="form-control"
-          value={form.state}
+          value={form.state ?? ""}
           onChange={onChange}
           required
           disabled={disabled}
@@ -86,7 +86,7 @@ export default function ProfileForm({
         <input
           name="pincode"
           className="form-control"
-          value={form.pincode}
+          value={form.pincode ?? ""}
           onChange={onChange}
           required
           disabled={disabled}
@@ -99,7 +99,7 @@ export default function ProfileForm({
         <input
           name="phone"
           className="form-control"
-          value={form.phone}
+          value={form.phone ?? ""}
           onChange={onChange}
           disabled={disabled}
         />
@@ -110,7 +110,7 @@ export default function ProfileForm({
           type="email"
           name="email"
           className="form-control"
-          value={form.email}
+          value={form.email ?? ""}
           onChange={onChange}
           disabled={disabled}
         />
@@ -120,7 +120,7 @@ export default function ProfileForm({
         <input
           name="gstin"
           className="form-control"
-          value={form.gstin}
+          value={form.gstin ?? ""}
           onChange={onChange}
           disabled={disabled}
         />
@@ -130,7 +130,7 @@ export default function ProfileForm({
         <input
           name="pan"
           className="form-control"
-          value={form.pan}
+          value={form.pan ?? ""}
           onChange={onChange}
           disabled={disabled}
         />

@@ -2,18 +2,21 @@
 import React, { useState, useContext, useRef } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { useProfile } from "../context/ProfileContext";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
   const [darkMode, setDarkMode] = useState(false);
   const collapseRef = useRef(null);
-
+  const { profile } = useProfile();
+  const shopName = profile?.shopName || "My Shop";
+  
   const closeNavbar = () => {
-  const collapseEl = collapseRef.current;
-  if (collapseEl && collapseEl.classList.contains("show")) {
-    collapseEl.classList.remove("show");
-  }
-};
+    const collapseEl = collapseRef.current;
+    if (collapseEl && collapseEl.classList.contains("show")) {
+      collapseEl.classList.remove("show");
+    }
+  };
 
   const toggleDarkMode = () => {
     setDarkMode(!darkMode);
@@ -30,7 +33,8 @@ const Navbar = () => {
       <div className="container-fluid">
         {/* Shop Name */}
         <span className="navbar-brand mb-0 h1">
-          {user ? user.shopName : "TECH VEDA's"}
+          {/* {user ? user.shopName : "TECH VEDA's"} */}
+          <span className="navbar-brand mb-0 h4">🏪 {shopName}</span>
         </span>
 
         {/* Hamburger */}
@@ -46,28 +50,48 @@ const Navbar = () => {
           <span className="navbar-toggler-icon"></span>
         </button>
 
-        <div className="collapse navbar-collapse" id="navbarNav" ref={collapseRef}>
+        <div
+          className="collapse navbar-collapse"
+          id="navbarNav"
+          ref={collapseRef}
+        >
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             <li className="nav-item">
-              <Link className="nav-link" to="/dashboard" onClick={closeNavbar}>Dashboard</Link>
+              <Link className="nav-link" to="/dashboard" onClick={closeNavbar}>
+                Dashboard
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/stock" onClick={closeNavbar}>Stock</Link>
+              <Link className="nav-link" to="/stock" onClick={closeNavbar}>
+                Stock
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/customerlist" onClick={closeNavbar}>Customer List</Link>
+              <Link
+                className="nav-link"
+                to="/customerlist"
+                onClick={closeNavbar}
+              >
+                Customer List
+              </Link>
             </li>
             {/* <li className="nav-item">
               <Link className="nav-link" to="/customer" onClick={closeNavbar}>Customers</Link>
             </li> */}
             <li className="nav-item">
-              <Link className="nav-link" to="/purchase" onClick={closeNavbar}>Purchase</Link>
+              <Link className="nav-link" to="/purchase" onClick={closeNavbar}>
+                Purchase
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/sale" onClick={closeNavbar}>Sale</Link>
+              <Link className="nav-link" to="/sale" onClick={closeNavbar}>
+                Sale
+              </Link>
             </li>
             <li className="nav-item">
-              <Link className="nav-link" to="/profile" onClick={closeNavbar}>Profile</Link>
+              <Link className="nav-link" to="/profile" onClick={closeNavbar}>
+                Profile
+              </Link>
             </li>
           </ul>
 
@@ -76,18 +100,22 @@ const Navbar = () => {
             {/* Dark Mode */}
             <button
               className="btn btn-sm btn-outline-secondary me-2"
-              onClick={toggleDarkMode} 
+              onClick={toggleDarkMode}
             >
               {darkMode ? "☀️ Light" : "🌙 Dark"}
             </button>
 
             {/* Login / Logout */}
             {user ? (
-              <button className="btn btn-danger btn-sm" onClick={logout} >
+              <button className="btn btn-danger btn-sm" onClick={logout}>
                 Logout
               </button>
             ) : (
-              <Link className="btn btn-success btn-sm" to="/login" onClick={closeNavbar}>
+              <Link
+                className="btn btn-success btn-sm"
+                to="/login"
+                onClick={closeNavbar}
+              >
                 Login
               </Link>
             )}

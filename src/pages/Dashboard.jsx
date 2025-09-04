@@ -1,15 +1,13 @@
-// src/pages/Dashboard.jsx
 import React, { useContext } from "react";
+import { useNavigate } from "react-router-dom";
 import { InventoryContext } from "../context/InventoryContext";
 import CurrentStock from "../components/CurrentStock";
 
 const Dashboard = () => {
-  const {
-    getProfitLoss,
-    getInventory,
-    getTransactions,
-    resetData,           // <- new
-  } = useContext(InventoryContext);
+  const { getProfitLoss, getInventory, getTransactions, resetData } =
+    useContext(InventoryContext);
+
+  const navigate = useNavigate();
 
   // Summaries
   const { totalPurchase, totalSales, profit } = getProfitLoss();
@@ -19,12 +17,10 @@ const Dashboard = () => {
 
   return (
     <div className="container mt-4">
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      {/* Header with reset button */}
+      <div className="d-flex justify-content-between align-items-center mb-4 bg-light p-3 rounded-4 shadow-sm">
         <h1 className="h3">📊 Dashboard</h1>
-        <button
-          className="btn btn-outline-danger btn-sm"
-          onClick={resetData}
-        >
+        <button className="btn btn-outline-danger btn-sm" onClick={resetData}>
           🔄 Reset All Data
         </button>
       </div>
@@ -32,19 +28,27 @@ const Dashboard = () => {
       {/* Summary Cards */}
       <div className="row g-3 mb-4">
         <div className="col-md-3">
-          <div className="card shadow-sm p-3 text-center">
+          <div
+            className="card shadow-sm p-3 text-center bg-light border-success"
+            style={{ cursor: "pointer" }}
+            // onClick={() => navigate("/sales")}
+          >
             <h5>Total Sales</h5>
             <p className="fw-bold text-success">₹{totalSales}</p>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card shadow-sm p-3 text-center">
+          <div
+            className="card shadow-sm p-3 text-center bg-light border-primary"
+            style={{ cursor: "pointer" }}
+            // onClick={() => navigate("/purchases")}
+          >
             <h5>Total Purchases</h5>
             <p className="fw-bold text-primary">₹{totalPurchase}</p>
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card shadow-sm p-3 text-center">
+          <div className="card shadow-sm p-3 text-center bg-light ">
             <h5>Profit / Loss</h5>
             <p
               className={`fw-bold ${
@@ -56,7 +60,7 @@ const Dashboard = () => {
           </div>
         </div>
         <div className="col-md-3">
-          <div className="card shadow-sm p-3 text-center">
+          <div className="card shadow-sm p-3 text-center bg-light border-warning">
             <h5>Transactions</h5>
             <p className="fw-bold text-warning">{transactions.length}</p>
           </div>
@@ -67,7 +71,7 @@ const Dashboard = () => {
       <CurrentStock inventory={inventory} />
 
       {/* Recent Activity */}
-      <div className="card shadow-sm p-3">
+      <div className="card shadow-sm p-3 mt-4">
         <h5 className="mb-3">🕒 Recent Activity</h5>
         <div className="table-responsive">
           <table className="table table-striped align-middle">
@@ -87,8 +91,8 @@ const Dashboard = () => {
                   </td>
                 </tr>
               ) : (
-                recentActivity.map((act) => (
-                  <tr key={act.id}>
+                recentActivity.map((act, i) => (
+                  <tr key={`${act.type}-${act.id}-${i}`}>
                     <td>{act.date}</td>
                     <td>
                       <span

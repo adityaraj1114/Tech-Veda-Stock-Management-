@@ -1,4 +1,5 @@
 import React, { createContext, useState, useEffect, useContext } from "react";
+import { validSignupCodes } from "../config/validSignupCodes"; // ✅ External list of codes
 
 export const AuthContext = createContext(null);
 
@@ -6,7 +7,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Mount hone par session restore karega
+  // 🔄 Restore session on mount
   useEffect(() => {
     const loggedInUser = localStorage.getItem("loggedInUser");
     if (loggedInUser) {
@@ -15,46 +16,72 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
+  // 🟢 Signup (requires valid code + only once)
+  const signup = (email, password, shopName, code) => {
+    if (!validSignupCodes.includes(code)) {
+      return {
+        success: false,
+        message: "❌ Invalid signup code. Please contact the seller.",
+      };
+    }
 
-  const signup = (email, password, shopName) => {
-  const existing = localStorage.getItem("user");
-  if (existing) {
-    return { success: false, message: "User already exists. Please login." };
-  }
+    const existing = localStorage.getItem("user");
+    if (existing) {
+      return {
+        success: false,
+        message: "User already exists. Please login.",
+      };
+    }
 
-  const newUser = { email, password, shopName };
-  localStorage.setItem("user", JSON.stringify(newUser));
-  return { success: true, message: "Signup successful. Please login." };
-};
+    const newUser = { email, password, shopName };
+    localStorage.setItem("user", JSON.stringify(newUser));
+    return { success: true, message: "Signup successful. Please login." };
+  };
 
-
-  // 🟢 Login (session create karega)
+  // 🟢 Login
   const login = (email, password) => {
     const stored = localStorage.getItem("user");
     if (!stored) {
-      return { success: false, message: "Please sign up first." };
+      return {
+        success: false,
+        message: "Please sign up first.",
+      };
     }
 
     const parsed = JSON.parse(stored);
     if (parsed.email === email && parsed.password === password) {
       setUser(parsed);
-      localStorage.setItem("loggedInUser", JSON.stringify(parsed)); // active session
+      localStorage.setItem("loggedInUser", JSON.stringify(parsed));
       localStorage.setItem("token", "dummy_token_123");
       return { success: true };
     }
 
-    return { success: false, message: "Invalid email or password" };
+    return {
+      success: false,
+      message: "Invalid email or password",
+    };
   };
 
-  // 🟢 Logout (session clear karega)
+  // 🟢 Logout
   const logout = () => {
     localStorage.removeItem("loggedInUser");
     localStorage.removeItem("token");
     setUser(null);
-    // navigate("/login");
   };
 
-  // 🟢 isAuthenticated flag
+  // 🟢 Update shop profile
+  const updateShopProfile = (updatedData) => {
+    const stored = localStorage.getItem("user");
+    if (!stored) return;
+
+    const parsed = JSON.parse(stored);
+    const updatedUser = { ...parsed, ...updatedData };
+
+    localStorage.setItem("user", JSON.stringify(updatedUser));
+    localStorage.setItem("loggedInUser", JSON.stringify(updatedUser));
+    setUser(updatedUser);
+  };
+
   const isAuthenticated = !!user;
 
   return (
@@ -67,6 +94,7 @@ export const AuthProvider = ({ children }) => {
         signup,
         login,
         logout,
+        updateShopProfile,
       }}
     >
       {children}
@@ -74,7 +102,7 @@ export const AuthProvider = ({ children }) => {
   );
 };
 
-// ✅ Custom Hook for easy use
+// ✅ Custom Hook
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
   if (!ctx) {

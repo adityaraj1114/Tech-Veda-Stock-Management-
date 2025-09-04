@@ -20,11 +20,13 @@ const Login = () => {
     }
   };
 
+  const userExists = !!localStorage.getItem("user");
+
   return (
     <div className="container d-flex justify-content-center align-items-center vh-100 bg-light">
       <div className="col-md-4">
         <div className="card shadow p-4 rounded-4">
-          <h2 className="text-center mb-4">Login</h2>
+          <h2 className="text-center mb-4">🔐 Login</h2>
 
           {error && (
             <div className="alert alert-danger text-center py-2">{error}</div>
@@ -60,11 +62,20 @@ const Login = () => {
             </button>
           </form>
 
-          <div className="text-center mt-3">
-            <small className="text-muted">
-              Don’t have an account? <a href="/signup">Sign up</a>
-            </small>
-          </div>
+          {/* 🔒 Conditional signup link */}
+          {!userExists ? (
+            <div className="text-center mt-3">
+              <small className="text-muted">
+                First time setup? <a href="/signup">Create account</a>
+              </small>
+            </div>
+          ) : (
+            <div className="text-center mt-3">
+              <small className="text-muted">
+                Only registered users can login. If you're not authorized, please contact the seller.
+              </small>
+            </div>
+          )}
         </div>
       </div>
     </div>
