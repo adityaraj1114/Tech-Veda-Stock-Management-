@@ -1,6 +1,7 @@
+// src/components/Login.jsx
 import React, { useState, useContext } from "react";
 import { AuthContext } from "../context/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 
 const Login = () => {
   const { login } = useContext(AuthContext);
@@ -14,9 +15,10 @@ const Login = () => {
     const result = login(email, password);
 
     if (result.success) {
+      setError("");
       navigate("/dashboard");
     } else {
-      setError(result.message);
+      setError(result.message || "Invalid credentials, please try again.");
     }
   };
 
@@ -32,9 +34,10 @@ const Login = () => {
             <div className="alert alert-danger text-center py-2">{error}</div>
           )}
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} autoComplete="off">
+            {/* Email */}
             <div className="mb-3">
-              <label className="form-label">Email Address</label>
+              <label className="form-label fw-semibold">Email Address</label>
               <input
                 type="email"
                 className="form-control"
@@ -45,8 +48,9 @@ const Login = () => {
               />
             </div>
 
+            {/* Password */}
             <div className="mb-3">
-              <label className="form-label">Password</label>
+              <label className="form-label fw-semibold">Password</label>
               <input
                 type="password"
                 className="form-control"
@@ -57,25 +61,25 @@ const Login = () => {
               />
             </div>
 
+            {/* Submit */}
             <button type="submit" className="btn btn-primary w-100">
               Login
             </button>
           </form>
 
-          {/* 🔒 Conditional signup link */}
-          {!userExists ? (
-            <div className="text-center mt-3">
+          {/* Footer message */}
+          <div className="text-center mt-3">
+            {!userExists ? (
               <small className="text-muted">
-                First time setup? <a href="/signup">Create account</a>
+                First time setup? <Link to="/signup">Create account</Link>
               </small>
-            </div>
-          ) : (
-            <div className="text-center mt-3">
-              <small className="text-muted">
-                Only registered users can login. If you're not authorized, please contact the seller.
+            ) : (
+              <small className="text-muted d-block">
+                Only registered users can login. <br />
+                If you're not authorized, please contact the seller.
               </small>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>

@@ -1,9 +1,13 @@
+// src/pages/Signup.jsx
 import React, { useState, useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { useProfile } from "../context/ProfileContext";
 
 export default function Signup() {
   const { signup } = useContext(AuthContext);
+  const { updateProfile } = useProfile();
+
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -14,7 +18,7 @@ export default function Signup() {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  // 🔒 Redirect to login if user already exists
+  // 🔒 Agar already user registered hai to login page par bhej do
   useEffect(() => {
     const userExists = !!localStorage.getItem("user");
     if (userExists) {
@@ -22,6 +26,7 @@ export default function Signup() {
     }
   }, [navigate]);
 
+  // Input change handler
   const handleChange = (e) => {
     setFormData((prev) => ({
       ...prev,
@@ -29,6 +34,7 @@ export default function Signup() {
     }));
   };
 
+  // Form submit
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -36,10 +42,18 @@ export default function Signup() {
       formData.email,
       formData.password,
       formData.shopName,
-      formData.code // ✅ pass the signup code
+      formData.code,
+      formData.name
     );
 
     if (result.success) {
+      // ProfileContext me shop details update
+      updateProfile({
+        shopName: formData.shopName,
+        ownerName: formData.name,
+        email: formData.email,
+      });
+
       alert("Signup successful! Please login.");
       navigate("/login");
     } else {
@@ -107,7 +121,9 @@ export default function Signup() {
             </div>
 
             <div className="mb-3">
-              <label className="form-label">Signup Code (provided by seller)</label>
+              <label className="form-label">
+                Signup Code (provided by seller)
+              </label>
               <input
                 type="text"
                 className="form-control"

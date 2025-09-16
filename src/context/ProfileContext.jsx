@@ -1,4 +1,3 @@
-// src/context/ProfileContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 const ProfileContext = createContext({
@@ -19,7 +18,7 @@ const safeParse = (key) => {
 export function ProfileProvider({ children }) {
   const [profile, setProfile] = useState(() => safeParse("profile"));
 
-  // Persist on every change
+  // Persist profile in localStorage
   useEffect(() => {
     localStorage.setItem("profile", JSON.stringify(profile));
   }, [profile]);
@@ -35,6 +34,4 @@ export function ProfileProvider({ children }) {
   );
 }
 
-// Custom hook
 export const useProfile = () => useContext(ProfileContext);
-

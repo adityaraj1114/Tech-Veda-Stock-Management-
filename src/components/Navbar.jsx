@@ -1,4 +1,4 @@
-// import React, { useState, useContext } from "react";
+// src/components/Navbar.jsx
 import React, { useState, useContext, useRef } from "react";
 import { Link } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
@@ -6,11 +6,13 @@ import { useProfile } from "../context/ProfileContext";
 
 const Navbar = () => {
   const { user, logout } = useContext(AuthContext);
-  const [darkMode, setDarkMode] = useState(false);
-  const collapseRef = useRef(null);
   const { profile } = useProfile();
   const shopName = profile?.shopName || "My Shop";
-  
+
+  const [darkMode, setDarkMode] = useState(false);
+  const collapseRef = useRef(null);
+
+  // Collapse close helper
   const closeNavbar = () => {
     const collapseEl = collapseRef.current;
     if (collapseEl && collapseEl.classList.contains("show")) {
@@ -18,8 +20,9 @@ const Navbar = () => {
     }
   };
 
+  // Dark mode toggle
   const toggleDarkMode = () => {
-    setDarkMode(!darkMode);
+    setDarkMode((prev) => !prev);
     document.body.classList.toggle("bg-dark");
     document.body.classList.toggle("text-light");
   };
@@ -32,9 +35,8 @@ const Navbar = () => {
     >
       <div className="container-fluid">
         {/* Shop Name */}
-        <span className="navbar-brand mb-0 h1">
-          {/* {user ? user.shopName : "TECH VEDA's"} */}
-          <span className="navbar-brand mb-0 h4">🏪 {shopName}</span>
+        <span className="navbar-brand mb-0 h4">
+          🏪 <b>{shopName}</b>
         </span>
 
         {/* Hamburger */}
@@ -55,15 +57,16 @@ const Navbar = () => {
           id="navbarNav"
           ref={collapseRef}
         >
+          {/* Left Links */}
           <ul className="navbar-nav me-auto mb-2 mb-lg-0">
             <li className="nav-item">
               <Link className="nav-link" to="/dashboard" onClick={closeNavbar}>
-                Dashboard
+                <b>Dashboard</b>
               </Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/stock" onClick={closeNavbar}>
-                Stock
+                <b>Stock</b>
               </Link>
             </li>
             <li className="nav-item">
@@ -72,34 +75,32 @@ const Navbar = () => {
                 to="/customerlist"
                 onClick={closeNavbar}
               >
-                Customer List
+                <b>Customer List</b>
               </Link>
             </li>
-            {/* <li className="nav-item">
-              <Link className="nav-link" to="/customer" onClick={closeNavbar}>Customers</Link>
-            </li> */}
+
             <li className="nav-item">
               <Link className="nav-link" to="/purchase" onClick={closeNavbar}>
-                Purchase
+                <b>Buy</b>
               </Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/sale" onClick={closeNavbar}>
-                Sale
+                <b>Sale</b>
               </Link>
             </li>
             <li className="nav-item">
               <Link className="nav-link" to="/profile" onClick={closeNavbar}>
-                Profile
+                <b>Profile</b>
               </Link>
             </li>
           </ul>
 
           {/* Right Side */}
-          <div className="d-flex align-items-center">
+          <div className="d-flex align-items-center gap-2">
             {/* Dark Mode */}
             <button
-              className="btn btn-sm btn-outline-secondary me-2"
+              className="btn btn-sm btn-outline-secondary"
               onClick={toggleDarkMode}
             >
               {darkMode ? "☀️ Light" : "🌙 Dark"}
@@ -108,7 +109,7 @@ const Navbar = () => {
             {/* Login / Logout */}
             {user ? (
               <button className="btn btn-danger btn-sm" onClick={logout}>
-                Logout
+                <b>Logout</b>
               </button>
             ) : (
               <Link
@@ -116,7 +117,7 @@ const Navbar = () => {
                 to="/login"
                 onClick={closeNavbar}
               >
-                Login
+                <b>Login</b>
               </Link>
             )}
           </div>

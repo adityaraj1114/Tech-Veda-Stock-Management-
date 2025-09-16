@@ -1,7 +1,9 @@
-// src/components/CustomerForm.jsx
 import React from "react";
+import { useCustomer } from "../context/CustomerContext";
 
-export default function CustomerForm({ customerInfo, setCustomerInfo }) {
+export default function CustomerForm() {
+  const { customerInfo, setCustomerInfo } = useCustomer();
+
   const onChange = (e) => {
     const { name, value } = e.target;
     setCustomerInfo((prev) => ({ ...prev, [name]: value }));
@@ -16,7 +18,7 @@ export default function CustomerForm({ customerInfo, setCustomerInfo }) {
           <input
             type="text"
             name="name"
-            value={customerInfo.name || ""}
+            value={customerInfo?.name || ""}
             onChange={onChange}
             className="form-control"
             placeholder="Name"
@@ -24,12 +26,12 @@ export default function CustomerForm({ customerInfo, setCustomerInfo }) {
           />
         </div>
 
-        {/* GSTIN (optional) */}
+        {/* GSTIN */}
         <div className="col-md-6">
           <input
             type="text"
             name="gstin"
-            value={customerInfo.gstin || ""}
+            value={customerInfo?.gstin || ""}
             onChange={onChange}
             className="form-control"
             placeholder="GSTIN (optional)"
@@ -41,10 +43,22 @@ export default function CustomerForm({ customerInfo, setCustomerInfo }) {
           <input
             type="text"
             name="billingAddress"
-            value={customerInfo.billingAddress || ""}
+            value={customerInfo?.billingAddress || ""}
             onChange={onChange}
             className="form-control"
             placeholder="Billing Address (optional)"
+          />
+        </div>
+
+        {/* Shipping Address */}
+        <div className="col-12">
+          <input
+            type="text"
+            name="shippingAddress"
+            value={customerInfo?.shippingAddress || ""}
+            onChange={onChange}
+            className="form-control"
+            placeholder="Shipping Address (optional)"
           />
         </div>
 
@@ -53,7 +67,7 @@ export default function CustomerForm({ customerInfo, setCustomerInfo }) {
           <input
             type="tel"
             name="contactPhone"
-            value={customerInfo.contactPhone || ""}
+            value={customerInfo?.contactPhone || ""}
             onChange={onChange}
             className="form-control"
             placeholder="Contact Phone"

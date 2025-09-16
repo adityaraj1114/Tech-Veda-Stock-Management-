@@ -18,9 +18,9 @@ export default function BillPreview({
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 2,
-    }).format(amount);
+    }).format(amount || 0);
 
-  // Find the transaction to preview
+  // ✅ Find the transaction to preview
   const currentTx = transactions.find((t) => t.id === showBillFor);
 
   // If no bill is selected or not found, don't render
@@ -36,23 +36,45 @@ export default function BillPreview({
         {/* ✅ Shop Details Header */}
         <div className="text-center border-bottom pb-2 mb-3">
           <h2 className="mb-1">{shopName}</h2>
-          <p className="mb-1">{profile?.address || "Shop Address"}</p>
           <p className="mb-1">
-            📞 {profile?.phone || "-"} | GSTIN: {profile?.gstin || "-"}
+            <b>Address : </b>
+            {[
+              profile?.addressLine1 || "Shop Address",
+              profile?.addressLine2,
+              profile?.city,
+              profile?.state,
+              profile?.pincode,
+            ]
+              .filter(Boolean)
+              .join(", ")}
+          </p>
+          <p className="mb-1">
+            📞 {profile?.phone || "-"} | <b>GSTIN:</b> {profile?.gstin || "-"}
           </p>
           <small className="text-muted">Tax Invoice</small>
         </div>
 
         {/* ✅ Invoice Meta Info */}
-        <div className="justify-content-between mb-3">
-          <div className="d-flex">
-            <p><b>Invoice ID:</b> {currentTx.id}</p>
-            <p><b>Date:</b> {currentTx.date}</p>
+        <div className="d-flex justify-content-between mb-3 lh-sm">
+          <div>
+            <p>
+              <b>Invoice ID:</b> {currentTx.id}
+            </p>
+            <p>
+              <b>Date:</b> {currentTx.date}
+            </p>
           </div>
-          <div className="text-start">
-            <p><b>Customer:</b> {currentTx.customer}</p>
-            <p><b>Phone:</b> {currentTx.customerInfo?.contactPhone || "-"}</p>
-            <p><b>Address:</b> {currentTx.customerInfo?.billingAddress || "-"}</p>
+          <div className="text-start lh-1">
+            <p>
+              <b>Customer:</b> {currentTx.customer}
+            </p>
+            <p>
+              <b>Phone:</b> {currentTx.customerInfo?.contactPhone || "-"}
+            </p>
+            <p>
+              <b>Address:</b>{" "}
+              {currentTx.customerInfo?.billingAddress || "-"}
+            </p>
           </div>
         </div>
 
@@ -82,9 +104,13 @@ export default function BillPreview({
 
         {/* ✅ Totals Section */}
         <div className="text-end mt-3">
-          <h5>Total: {formatCurrency(currentTx.total)}</h5>
-          <h6 className="text-success">Paid: {formatCurrency(currentTx.paid)}</h6>
-          <h6 className="text-danger">Pending: {formatCurrency(currentTx.pending)}</h6>
+          <h5>Total: {formatCurrency(currentTx.totalAmount)}</h5>
+          <h6 className="text-success">
+            Paid: {formatCurrency(currentTx.paid)}
+          </h6>
+          <h6 className="text-danger">
+            Pending: {formatCurrency(currentTx.pending)}
+          </h6>
         </div>
 
         {/* ✅ Footer */}
@@ -93,7 +119,8 @@ export default function BillPreview({
             Thank you for shopping with <b>{shopName}</b>!
           </p>
           <small className="text-muted">
-            This is a computer-generated invoice and does not require a signature.
+            This is a computer-generated invoice and does not require a
+            signature.
           </small>
         </div>
       </div>

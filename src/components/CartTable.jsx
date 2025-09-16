@@ -1,20 +1,33 @@
 // src/components/CartTable.jsx
 import React from "react";
 
-const CartTable = ({ cart, removeFromCart, handleFinalizeSale }) => {
-  const grandTotal = cart.reduce((sum, item) => sum + item.total, 0);
+export default function CartTable({ cart, removeFromCart, handleFinalizeSale }) {
+  // 🧮 Calculate Grand Total (NaN safe)
+  const grandTotal = cart.reduce(
+    (sum, item) => sum + (Number(item.total) || 0),
+    0
+  );
+
+  if (!cart || cart.length === 0) {
+    return (
+      <div className="alert alert-info text-center">
+        🛒 Cart is empty. Add items to proceed.
+      </div>
+    );
+  }
 
   return (
     <div className="mb-3">
       <h5>🛒 Cart</h5>
-      <table className="table table-bordered">
-        <thead>
+
+      <table className="table table-bordered table-striped">
+        <thead className="table-light">
           <tr>
             <th>#</th>
             <th>Product</th>
             <th>Qty</th>
-            <th>Unit Price</th>
-            <th>Total</th>
+            <th>Unit Price (₹)</th>
+            <th>Total (₹)</th>
             <th>Action</th>
           </tr>
         </thead>
@@ -24,8 +37,8 @@ const CartTable = ({ cart, removeFromCart, handleFinalizeSale }) => {
               <td>{i + 1}</td>
               <td>{item.product}</td>
               <td>{item.quantity}</td>
-              <td>₹{item.unitPrice}</td>
-              <td>₹{item.total}</td>
+              <td>₹{Number(item.unitPrice).toFixed(2)}</td>
+              <td>₹{Number(item.total).toFixed(2)}</td>
               <td>
                 <button
                   className="btn btn-sm btn-danger"
@@ -40,15 +53,20 @@ const CartTable = ({ cart, removeFromCart, handleFinalizeSale }) => {
       </table>
 
       {/* Grand Total */}
-      <div className="text-end fw-bold mb-2">Total: ₹{grandTotal}</div>
+      <div className="text-end fw-bold fs-5 mb-3">
+        Grand Total: ₹{grandTotal.toFixed(2)}
+      </div>
 
-      <div className="d-flex gap-2">
-        <button onClick={handleFinalizeSale} className="btn btn-success">
+      {/* Finalize Sale */}
+      <div className="d-flex justify-content-end">
+        <button
+          onClick={handleFinalizeSale}
+          className="btn btn-success"
+          disabled={cart.length === 0}
+        >
           ✅ Finalize Sale
         </button>
       </div>
     </div>
   );
-};
-
-export default CartTable;
+}

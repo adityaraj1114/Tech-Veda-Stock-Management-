@@ -1,19 +1,49 @@
+// src/pages/Dashboard.jsx
 import React, { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { InventoryContext } from "../context/InventoryContext";
+import { SalesContext } from "../context/SalesContext";
+import { PurchaseContext } from "../context/PurchaseContext";
 import CurrentStock from "../components/CurrentStock";
 
 const Dashboard = () => {
-  const { getProfitLoss, getInventory, getTransactions, resetData } =
-    useContext(InventoryContext);
+  const { getInventory, resetData } = useContext(InventoryContext);
+  const { sales } = useContext(SalesContext);
+  const { purchases } = useContext(PurchaseContext);
 
   const navigate = useNavigate();
 
-  // Summaries
-  const { totalPurchase, totalSales, profit } = getProfitLoss();
-  const inventory = getInventory();
-  const transactions = getTransactions();
+  // ✅ Calculate totals safely (convert to number)
+  const totalSales = sales.reduce((sum, s) => sum + Number(s.total || 0), 0);
+  const totalPurchase = purchases.reduce(
+    (sum, p) => sum + Number(p.total || 0),
+    0
+  );
+  const profit = totalSales - totalPurchase;
+
+  // ✅ Prepare transactions
+  const salesTx = sales.map((s) => ({
+    id: s.id,
+    type: "Sale",
+    date: s.date,
+    details: `${s.product} × ${s.quantity}`,
+    amount: Number(s.total || 0),
+  }));
+
+  const purchaseTx = purchases.map((p) => ({
+    id: p.id,
+    type: "Purchase",
+    date: p.date,
+    details: `${p.product} × ${p.quantity}`,
+    amount: Number(p.total || 0),
+  }));
+
+  const transactions = [...salesTx, ...purchaseTx].sort(
+    (a, b) => new Date(b.date) - new Date(a.date)
+  );
+
   const recentActivity = transactions.slice(0, 10);
+  const inventory = getInventory();
 
   return (
     <div className="container mt-4">
@@ -31,7 +61,7 @@ const Dashboard = () => {
           <div
             className="card shadow-sm p-3 text-center bg-light border-success"
             style={{ cursor: "pointer" }}
-            // onClick={() => navigate("/sales")}
+            onClick={() => navigate("/sale")}
           >
             <h5>Total Sales</h5>
             <p className="fw-bold text-success">₹{totalSales}</p>
@@ -41,14 +71,30 @@ const Dashboard = () => {
           <div
             className="card shadow-sm p-3 text-center bg-light border-primary"
             style={{ cursor: "pointer" }}
-            // onClick={() => navigate("/purchases")}
+            onClick={() => navigate("/purchase")}
           >
             <h5>Total Purchases</h5>
             <p className="fw-bold text-primary">₹{totalPurchase}</p>
           </div>
         </div>
-        <div className="col-md-3">
-          <div className="card shadow-sm p-3 text-center bg-light ">
+
+        <div
+  className="card shadow-sm p-3 text-center bg-light"
+  style={{ cursor: "pointer" }}
+  onClick={() => navigate("/profit-loss")}
+>
+  <h5>Profit / Loss</h5>
+  <p
+    className={`fw-bold ${
+      profit >= 0 ? "text-success" : "text-danger"
+    }`}
+  >
+    ₹{profit}
+  </p>
+</div>
+
+        {/* <div className="col-md-3">
+          <div className="card shadow-sm p-3 text-center bg-light">
             <h5>Profit / Loss</h5>
             <p
               className={`fw-bold ${
@@ -58,7 +104,7 @@ const Dashboard = () => {
               ₹{profit}
             </p>
           </div>
-        </div>
+        </div> */}
         <div className="col-md-3">
           <div className="card shadow-sm p-3 text-center bg-light border-warning">
             <h5>Transactions</h5>

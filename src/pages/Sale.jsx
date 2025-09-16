@@ -1,7 +1,9 @@
-// src/pages/Sales.jsx
-import React, { useContext, useState, useEffect } from "react";
-import html2pdf from "html2pdf.js";
-import { InventoryContext } from "../context/InventoryContext";
+import React, { useState, useEffect } from "react";
+import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
+import { useCustomer } from "../context/CustomerContext";
+import { useSales } from "../context/SalesContext";
+import { useInventory } from "../context/InventoryContext";
+
 import CartTable from "../components/CartTable";
 import CustomerForm from "../components/CustomerForm";
 import ProductForm from "../components/ProductForm";
@@ -9,26 +11,18 @@ import BillPreview from "../components/BillPreview";
 import SaleTransactions from "../components/SaleTransactions";
 
 export default function Sales() {
-  const { addSale, getInventory, addCustomer, updateCustomer, customers } =
-    useContext(InventoryContext);
-
-  // ✅ Customer Info
-  const [customerInfo, setCustomerInfo] = useState({
-    name: "",
-    gstin: "",
-    billingAddress: "",
-    contactPhone: "",
-  });
+  const { customers, addCustomer, updateCustomer, customerInfo, setCustomerInfo } =
+    useCustomer();
+  const { addSale } = useSales();
+  const { getInventory } = useInventory();
 
   const [paidAmount, setPaidAmount] = useState("");
   const [cart, setCart] = useState([]);
-
-  // Product form
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
 
-  // Inventory options
+  // Product options from inventory
   const inventory = getInventory();
   const productOptions = inventory.map((p) => ({
     value: p.item,
@@ -38,7 +32,7 @@ export default function Sales() {
 
   // Add to cart
   const handleAddToCart = (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     if (!product || !quantity || !price) return;
 
     const qty = parseInt(quantity, 10);
@@ -59,11 +53,9 @@ export default function Sales() {
     setPrice("");
   };
 
-  const removeFromCart = (i) => {
-    setCart((c) => c.filter((_, idx) => idx !== i));
-  };
+  const removeFromCart = (i) => setCart((c) => c.filter((_, idx) => idx !== i));
 
-  // Transactions (localStorage)
+  // Transactions (persisted in localStorage)
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem("transactions");
     return saved ? JSON.parse(saved) : [];
@@ -75,7 +67,7 @@ export default function Sales() {
 
   const [showBillFor, setShowBillFor] = useState(null);
 
-  // Finalize Sale
+  // -------------------- Finalize Sale (Product-wise) --------------------
   const handleFinalizeSale = () => {
     if (!customerInfo.name || cart.length === 0) {
       alert("⚠️ Please enter customer details and add products.");
@@ -86,85 +78,116 @@ export default function Sales() {
     const paid = parseFloat(paidAmount || 0);
     const pending = total - paid;
     const date = new Date().toLocaleString();
-    const id = Date.now() + Math.random();
+    const txId = Date.now() + Math.random();
 
+    // Save transaction for bill preview
     const tx = {
-      id,
+      id: txId,
       customer: customerInfo.name.trim(),
       date,
       items: cart,
       total,
       paid,
       pending,
-      customerInfo, // ✅ Save full customer details
+      customerInfo: { ...customerInfo },
     };
-
-    // Save transaction locally
     setTransactions((t) => [...t, tx]);
+    setShowBillFor(txId);
 
-    // Save sales in context
-    cart.forEach((it) =>
-      addSale({
-        customer: tx.customer,
-        product: it.product,
-        quantity: it.quantity,
-        unitPrice: it.unitPrice,
-        totalAmount: it.total,
-        date,
-      })
-    );
+    // Save **product-wise entries** into SalesContext
+    addSale({
+      customer: customerInfo.name.trim(),
+      customerInfo: { ...customerInfo },
+      items: cart,
+      total,
+      paid,
+      pending,
+      date,
+    });
 
-    // Update or add customer in context
-    const existing = customers.find((c) => c.name === customerInfo.name);
+    // --- Update Customer record ---
+    const normalizePhone = (phone) =>
+      (phone || "").replace(/\D/g, "").trim() || "NA";
+    const phoneB = normalizePhone(customerInfo.contactPhone);
+
+    const existing = customers.find((c) => {
+      const sameName =
+        (c.name || "").trim().toLowerCase() ===
+        customerInfo.name.trim().toLowerCase();
+      const phoneA = normalizePhone(c.contactPhone);
+
+      if (phoneA === "NA" || phoneB === "NA") return sameName;
+      return sameName && phoneA === phoneB;
+    });
+
     if (existing) {
-      updateCustomer(existing.id, { ...existing, ...customerInfo });
+      updateCustomer(existing.id, {
+        name: customerInfo.name || existing.name,
+        contactPhone: customerInfo.contactPhone || existing.contactPhone,
+        billingAddress: customerInfo.billingAddress || existing.billingAddress,
+        shippingAddress:
+          customerInfo.shippingAddress || existing.shippingAddress,
+        gstin: customerInfo.gstin || existing.gstin,
+        totalPurchase: (existing.totalPurchase || 0) + total,
+        paidAmount: (existing.paidAmount || 0) + paid,
+        pendingAmount: (existing.pendingAmount || 0) + pending,
+      });
     } else {
-      addCustomer(customerInfo);
+      addCustomer({
+        ...customerInfo,
+        totalPurchase: total,
+        paidAmount: paid,
+        pendingAmount: pending,
+      });
     }
 
-    // Reset form
+    // Reset cart & form
     setCart([]);
     setCustomerInfo({
       name: "",
       gstin: "",
       billingAddress: "",
+      shippingAddress: "",
       contactPhone: "",
     });
     setPaidAmount("");
-    setShowBillFor(id);
   };
 
+  // Delete Transaction
   const handleDeleteTx = (txId) => {
     if (!window.confirm("Delete this transaction?")) return;
     setTransactions((t) => t.filter((tx) => tx.id !== txId));
     if (showBillFor === txId) setShowBillFor(null);
   };
 
+  // Share bill
   const shareBillOnWhatsApp = (tx) => {
     const text = `🧾 Bill for ${tx.customer}
 Date: ${tx.date}
 
 ${tx.items
-  .map(
-    (it, i) =>
-      `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice} = ₹${it.total}`
-  )
-  .join("\n")}
+      .map(
+        (it, i) =>
+          `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice} = ₹${it.total}`
+      )
+      .join("\n")}
 
 Total: ₹${tx.total}
 Paid: ₹${tx.paid}
 Pending: ₹${tx.pending}
 
 📍 Address: ${tx.customerInfo.billingAddress || "N/A"}
+📦 Shipping: ${tx.customerInfo.shippingAddress || "N/A"}
 📞 Phone: ${tx.customerInfo.contactPhone || "N/A"}
 GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
 
-    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
-    window.open(url, "_blank");
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
+  // Download Bill PDF
   const downloadBillPDF = (tx) => {
     const el = document.getElementById(`bill_${tx.id}`);
+    if (!el) return;
     const opt = {
       margin: 0.5,
       filename: `Bill_${tx.customer}_${tx.id}.pdf`,
@@ -172,20 +195,14 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
     };
-    html2pdf().set(opt).from(el).save();
+    html2pdf().set(opt).from(el).save().catch((err) => console.error(err));
   };
 
   return (
     <div className="container py-4">
       <h2 className="mb-4">💰 Sales Management</h2>
 
-      {/* Customer Details */}
-      <CustomerForm
-        customerInfo={customerInfo}
-        setCustomerInfo={setCustomerInfo}
-      />
-
-      {/* Product Selection */}
+      <CustomerForm />
       <ProductForm
         product={product}
         setProduct={setProduct}
@@ -197,14 +214,12 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         handleAddToCart={handleAddToCart}
       />
 
-      {/* Cart */}
       <CartTable
         cart={cart}
         removeFromCart={removeFromCart}
         handleFinalizeSale={handleFinalizeSale}
       />
 
-      {/* Paid Amount */}
       <div className="mb-3">
         <input
           type="number"
@@ -215,7 +230,6 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         />
       </div>
 
-      {/* Bill Preview */}
       <BillPreview
         shareBillOnWhatsApp={shareBillOnWhatsApp}
         downloadBillPDF={downloadBillPDF}
@@ -225,7 +239,6 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         tx={transactions.find((t) => t.id === showBillFor)}
       />
 
-      {/* Sale Transactions */}
       <SaleTransactions
         transactions={transactions}
         onView={setShowBillFor}

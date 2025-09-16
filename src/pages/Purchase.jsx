@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useInventory } from "../context/InventoryContext";
+import { usePurchase } from "../context/PurchaseContext";
 
 export default function Purchases() {
   const {
@@ -8,20 +8,24 @@ export default function Purchases() {
     addToPurchaseCart,
     completePurchase,
     deletePurchase,
-  } = useInventory();
+  } = usePurchase();
 
   const [supplier, setSupplier] = useState("");
   const [item, setItem] = useState("");
   const [quantity, setQuantity] = useState("");
   const [cost, setCost] = useState("");
-  const [selectedPurchase, setSelectedPurchase] = useState(null); // for view modal
+  const [selectedPurchase, setSelectedPurchase] = useState(null);
 
   // Add item to cart
   const handleAddToCart = (e) => {
     e.preventDefault();
     if (!supplier || !item || !quantity || !cost) return;
 
-    addToPurchaseCart({ item, quantity, cost });
+    addToPurchaseCart({
+      item,
+      quantity: parseInt(quantity, 10),
+      cost: parseFloat(cost),
+    });
 
     setItem("");
     setQuantity("");
@@ -58,6 +62,7 @@ export default function Purchases() {
             placeholder="Item"
             value={item}
             onChange={(e) => setItem(e.target.value)}
+            required
           />
         </div>
         <div className="col-md">
@@ -67,6 +72,8 @@ export default function Purchases() {
             placeholder="Quantity"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
+            required
+            min="1"
           />
         </div>
         <div className="col-md">
@@ -76,6 +83,8 @@ export default function Purchases() {
             placeholder="Cost per Unit"
             value={cost}
             onChange={(e) => setCost(e.target.value)}
+            required
+            min="1"
           />
         </div>
         <div className="col-auto">
@@ -109,17 +118,15 @@ export default function Purchases() {
               ))}
             </tbody>
           </table>
-          <button
-            className="btn btn-success"
-            onClick={handleCompletePurchase}
-          >
-            ✅ Buy
+          <button className="btn btn-success" onClick={handleCompletePurchase}>
+            ✅ Complete Purchase
           </button>
         </div>
       )}
 
-      {/* Purchases Table */}
+      {/* Purchases History Table */}
       <div className="table-responsive">
+        <h5>📑 Purchase Transactions</h5>
         <table className="table table-bordered table-hover align-middle">
           <thead className="table-light">
             <tr>
@@ -144,7 +151,7 @@ export default function Purchases() {
                     <td className="fw-bold text-danger">₹{p.totalCost}</td>
                     <td>
                       <button
-                        className="btn btn-sm btn-info me-2"
+                        className="btn btn-sm btn-info"
                         onClick={() => setSelectedPurchase(p)}
                       >
                         👁 View
@@ -162,7 +169,7 @@ export default function Purchases() {
                 ))
             ) : (
               <tr>
-                <td colSpan="5" className="text-center text-muted">
+                <td colSpan="6" className="text-center text-muted">
                   No purchases found 🚫
                 </td>
               </tr>
