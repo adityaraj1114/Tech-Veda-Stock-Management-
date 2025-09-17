@@ -11,9 +11,14 @@ import BillPreview from "../components/BillPreview";
 import SaleTransactions from "../components/SaleTransactions";
 
 export default function Sales() {
-  const { customers, addCustomer, updateCustomer, customerInfo, setCustomerInfo } =
-    useCustomer();
-  const { addSale } = useSales();
+  const {
+    customers,
+    addCustomer,
+    updateCustomer,
+    customerInfo,
+    setCustomerInfo,
+  } = useCustomer();
+  const { addSale, setTotalSales } = useSales(); // ✅ assuming setTotalSales is exposed
   const { getInventory } = useInventory();
 
   const [paidAmount, setPaidAmount] = useState("");
@@ -22,7 +27,6 @@ export default function Sales() {
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
 
-  // Product options from inventory
   const inventory = getInventory();
   const productOptions = inventory.map((p) => ({
     value: p.item,
@@ -30,7 +34,6 @@ export default function Sales() {
     price: p.price || 0,
   }));
 
-  // Add to cart
   const handleAddToCart = (e) => {
     if (e) e.preventDefault();
     if (!product || !quantity || !price) return;
@@ -55,7 +58,6 @@ export default function Sales() {
 
   const removeFromCart = (i) => setCart((c) => c.filter((_, idx) => idx !== i));
 
-  // Transactions (persisted in localStorage)
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem("transactions");
     return saved ? JSON.parse(saved) : [];
@@ -63,11 +65,12 @@ export default function Sales() {
 
   useEffect(() => {
     localStorage.setItem("transactions", JSON.stringify(transactions));
-  }, [transactions]);
+    const total = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+    setTotalSales?.(total); // ✅ update context for dashboard
+  }, [transactions, setTotalSales]);
 
   const [showBillFor, setShowBillFor] = useState(null);
 
-  // -------------------- Finalize Sale (Product-wise) --------------------
   const handleFinalizeSale = () => {
     if (!customerInfo.name || cart.length === 0) {
       alert("⚠️ Please enter customer details and add products.");
@@ -80,7 +83,6 @@ export default function Sales() {
     const date = new Date().toLocaleString();
     const txId = Date.now() + Math.random();
 
-    // Save transaction for bill preview
     const tx = {
       id: txId,
       customer: customerInfo.name.trim(),
@@ -94,7 +96,6 @@ export default function Sales() {
     setTransactions((t) => [...t, tx]);
     setShowBillFor(txId);
 
-    // Save **product-wise entries** into SalesContext
     addSale({
       customer: customerInfo.name.trim(),
       customerInfo: { ...customerInfo },
@@ -105,7 +106,6 @@ export default function Sales() {
       date,
     });
 
-    // --- Update Customer record ---
     const normalizePhone = (phone) =>
       (phone || "").replace(/\D/g, "").trim() || "NA";
     const phoneB = normalizePhone(customerInfo.contactPhone);
@@ -141,7 +141,6 @@ export default function Sales() {
       });
     }
 
-    // Reset cart & form
     setCart([]);
     setCustomerInfo({
       name: "",
@@ -153,14 +152,12 @@ export default function Sales() {
     setPaidAmount("");
   };
 
-  // Delete Transaction
   const handleDeleteTx = (txId) => {
     if (!window.confirm("Delete this transaction?")) return;
     setTransactions((t) => t.filter((tx) => tx.id !== txId));
     if (showBillFor === txId) setShowBillFor(null);
   };
 
-  // Share bill
   const shareBillOnWhatsApp = (tx) => {
     const text = `🧾 Bill for ${tx.customer}
 Date: ${tx.date}
@@ -184,7 +181,6 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  // Download Bill PDF
   const downloadBillPDF = (tx) => {
     const el = document.getElementById(`bill_${tx.id}`);
     if (!el) return;
@@ -198,9 +194,18 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
     html2pdf().set(opt).from(el).save().catch((err) => console.error(err));
   };
 
+  // ✅ Total Sales Calculation
+  const totalSales = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+
   return (
     <div className="container py-4">
       <h2 className="mb-4">💰 Sales Management</h2>
+
+      {/* ✅ Total Sales Summary Box */}
+      <div className="alert alert-info d-flex justify-content-between align-items-center">
+        <strong>📊 Total Sales:</strong>
+        <span className="fs-5 fw-bold text-success">₹{totalSales.toFixed(2)}</span>
+      </div>
 
       <CustomerForm />
       <ProductForm

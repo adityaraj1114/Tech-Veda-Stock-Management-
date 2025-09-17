@@ -191,7 +191,7 @@ export const CustomerProvider = ({ children }) => {
   return (
     <CustomerContext.Provider
       value={{
-        customers,
+        customers, // 🔥 this is your customerList
         customerInfo,
         setCustomerInfo,
         addCustomer,

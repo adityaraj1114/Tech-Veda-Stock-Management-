@@ -24,8 +24,15 @@ const Login = () => {
 
   const userExists = !!localStorage.getItem("user");
 
+  const contactSeller = () => {
+    const message = `Hello, I’m interested in buying your software. Please guide me.`;
+    const phone = "9507935720";
+    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
+
   return (
-    <div className="container d-flex justify-content-center align-items-center vh-100 bg-light">
+    <div className="container d-flex flex-column justify-content-center align-items-center vh-100 bg-light">
       <div className="col-md-4">
         <div className="card shadow p-4 rounded-4">
           <h2 className="text-center mb-4">🔐 Login</h2>
@@ -80,6 +87,18 @@ const Login = () => {
               </small>
             )}
           </div>
+
+          {/* Contact Seller Button */}
+          <div className="text-center mt-4">
+            <button className="btn btn-outline-success w-100" onClick={contactSeller}>
+              📲 Contact Seller
+            </button>
+          </div>
+        </div>
+
+        {/* Footer Branding */}
+        <div className="text-center mt-3">
+          <small className="text-muted">Powered by <b>Tech Veda's</b></small>
         </div>
       </div>
     </div>

@@ -1,6 +1,7 @@
+// src/context/PurchaseContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-export const PurchaseContext = createContext(); // ✅ named export
+export const PurchaseContext = createContext();
 
 export const PurchaseProvider = ({ children }) => {
   const [purchases, setPurchases] = useState(() => {
@@ -37,13 +38,13 @@ export const PurchaseProvider = ({ children }) => {
     const newPurchase = {
       id: Date.now() + Math.random(),
       supplier: supplier.trim(),
-      items: purchaseCart, // ✅ multiple items store
+      items: purchaseCart,
       totalCost,
       date: new Date().toLocaleString(),
     };
 
     setPurchases((prev) => [...prev, newPurchase]);
-    setPurchaseCart([]); // empty cart
+    setPurchaseCart([]);
   };
 
   const clearPurchaseCart = () => setPurchaseCart([]);
@@ -89,6 +90,10 @@ export const PurchaseProvider = ({ children }) => {
     );
   };
 
+  // ✅ Total Purchased Amount
+  const getTotalPurchaseAmount = () =>
+    purchases.reduce((sum, p) => sum + (p.totalCost || 0), 0);
+
   // ✅ Persist to localStorage
   useEffect(() => {
     localStorage.setItem("purchases", JSON.stringify(purchases));
@@ -104,7 +109,8 @@ export const PurchaseProvider = ({ children }) => {
         clearPurchaseCart,
         addPurchase,
         deletePurchase,
-        getPurchasedItems, // ✅ helper to get flat list
+        getPurchasedItems,
+        getTotalPurchaseAmount, // ✅ exposed
       }}
     >
       {children}

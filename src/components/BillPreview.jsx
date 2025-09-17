@@ -1,6 +1,6 @@
 // src/components/BillPreview.jsx
 import React from "react";
-import { useProfile } from "../context/ProfileContext"; // ✅ Profile context import
+import { useProfile } from "../context/ProfileContext";
 
 export default function BillPreview({
   shareBillOnWhatsApp,
@@ -9,10 +9,10 @@ export default function BillPreview({
   showBillFor,
   transactions,
 }) {
-  const { profile } = useProfile(); // ✅ profile data access
-  const shopName = profile?.shopName || "My Shop"; // fallback
+  const { profile } = useProfile();
+  const shopName = profile?.shopName || "My Shop";
 
-  // ✅ Currency Formatter (INR format)
+  // Currency formatter
   const formatCurrency = (amount) =>
     new Intl.NumberFormat("en-IN", {
       style: "currency",
@@ -20,11 +20,26 @@ export default function BillPreview({
       minimumFractionDigits: 2,
     }).format(amount || 0);
 
-  // ✅ Find the transaction to preview
+  // Find the transaction to preview
   const currentTx = transactions.find((t) => t.id === showBillFor);
 
-  // If no bill is selected or not found, don't render
   if (!showBillFor || !currentTx) return null;
+
+  // Calculate totals
+  const grandTotal =
+    currentTx.items?.reduce(
+      (sum, it) => sum + ((it.unitPrice || 0) * (it.quantity || 0)),
+      0
+    ) || 0;
+
+  // Prefer transaction-level paid if available, else sum item-level paid
+  const paid =
+    typeof currentTx.paid === "number"
+      ? currentTx.paid
+      : currentTx.items?.reduce((sum, it) => sum + (it.paid || 0), 0) || 0;
+
+  // Always calculate pending from grandTotal - paid
+  const pending = grandTotal - paid;
 
   return (
     <>
@@ -33,7 +48,7 @@ export default function BillPreview({
         className="border bg-white pt-3 p-2 mb-4 shadow mt-5"
         style={{ maxWidth: "800px", margin: "auto" }}
       >
-        {/* ✅ Shop Details Header */}
+        {/* Shop Details Header */}
         <div className="text-center border-bottom pb-2 mb-3">
           <h2 className="mb-1">{shopName}</h2>
           <p className="mb-1">
@@ -54,7 +69,7 @@ export default function BillPreview({
           <small className="text-muted">Tax Invoice</small>
         </div>
 
-        {/* ✅ Invoice Meta Info */}
+        {/* Invoice Meta Info */}
         <div className="d-flex justify-content-between mb-3 lh-sm">
           <div>
             <p>
@@ -72,13 +87,12 @@ export default function BillPreview({
               <b>Phone:</b> {currentTx.customerInfo?.contactPhone || "-"}
             </p>
             <p>
-              <b>Address:</b>{" "}
-              {currentTx.customerInfo?.billingAddress || "-"}
+              <b>Address:</b> {currentTx.customerInfo?.billingAddress || "-"}
             </p>
           </div>
         </div>
 
-        {/* ✅ Items Table */}
+        {/* Items Table */}
         <table className="table table-sm table-bordered">
           <thead className="table-light">
             <tr>
@@ -96,24 +110,20 @@ export default function BillPreview({
                 <td>{it.product}</td>
                 <td>{it.quantity}</td>
                 <td>{formatCurrency(it.unitPrice)}</td>
-                <td>{formatCurrency(it.unitPrice * it.quantity)}</td>
+                <td>{formatCurrency((it.unitPrice || 0) * (it.quantity || 0))}</td>
               </tr>
             ))}
           </tbody>
         </table>
 
-        {/* ✅ Totals Section */}
+        {/* Totals Section */}
         <div className="text-end mt-3">
-          <h5>Total: {formatCurrency(currentTx.totalAmount)}</h5>
-          <h6 className="text-success">
-            Paid: {formatCurrency(currentTx.paid)}
-          </h6>
-          <h6 className="text-danger">
-            Pending: {formatCurrency(currentTx.pending)}
-          </h6>
+          <h5>Total: {formatCurrency(grandTotal)}</h5>
+          <h6 className="text-success">Paid: {formatCurrency(paid)}</h6>
+          <h6 className="text-danger">Pending: {formatCurrency(pending)}</h6>
         </div>
 
-        {/* ✅ Footer */}
+        {/* Footer */}
         <div className="text-center border-top mt-4 pt-2">
           <p className="mb-0">
             Thank you for shopping with <b>{shopName}</b>!
@@ -125,7 +135,7 @@ export default function BillPreview({
         </div>
       </div>
 
-      {/* ✅ Actions */}
+      {/* Actions */}
       <div className="d-flex gap-2 mt-3 justify-content-center">
         <button
           className="btn btn-primary btn-sm"

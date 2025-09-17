@@ -100,7 +100,7 @@ export default function VisitingCard({ form, onShare }) {
           }}
           onClick={onShare}
         >
-          📲 Share Card
+          📲 Share Card Detail's
         </button>
       </div>
     </div>

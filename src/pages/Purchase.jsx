@@ -1,5 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { usePurchase } from "../context/PurchaseContext";
+import Papa from "papaparse";
+import { saveAs } from "file-saver";
+import * as XLSX from "xlsx";
 
 export default function Purchases() {
   const {
@@ -8,6 +11,7 @@ export default function Purchases() {
     addToPurchaseCart,
     completePurchase,
     deletePurchase,
+    getTotalPurchaseAmount,
   } = usePurchase();
 
   const [supplier, setSupplier] = useState("");
@@ -15,8 +19,16 @@ export default function Purchases() {
   const [quantity, setQuantity] = useState("");
   const [cost, setCost] = useState("");
   const [selectedPurchase, setSelectedPurchase] = useState(null);
+  const [search, setSearch] = useState("");
 
-  // Add item to cart
+  // 🔍 Filtered purchases by supplier
+  const filteredPurchases = useMemo(() => {
+    return purchases.filter((p) =>
+      p.supplier.toLowerCase().includes(search.toLowerCase())
+    );
+  }, [purchases, search]);
+
+  // ➕ Add item to cart
   const handleAddToCart = (e) => {
     e.preventDefault();
     if (!supplier || !item || !quantity || !cost) return;
@@ -32,16 +44,65 @@ export default function Purchases() {
     setCost("");
   };
 
-  // Complete purchase
+  // ✅ Complete purchase
   const handleCompletePurchase = () => {
     if (!supplier || purchaseCart.length === 0) return;
     completePurchase(supplier);
     setSupplier("");
   };
 
+  // 📄 Export CSV
+  const exportCSV = () => {
+    if (!filteredPurchases.length) return;
+
+    const data = filteredPurchases.map((p) => ({
+      Date: p.date,
+      Supplier: p.supplier,
+      "Total Cost (₹)": p.totalCost.toFixed(2),
+      Items: p.items.map((it) => `${it.item} (${it.quantity})`).join(", "),
+    }));
+
+    const csv = Papa.unparse(data);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    saveAs(blob, `purchases_${Date.now()}.csv`);
+  };
+
+  // 📊 Export Excel
+  const exportExcel = () => {
+    if (!filteredPurchases.length) return;
+
+    const data = filteredPurchases.map((p) => ({
+      Date: p.date,
+      Supplier: p.supplier,
+      "Total Cost (₹)": p.totalCost.toFixed(2),
+      Items: p.items.map((it) => `${it.item} (${it.quantity})`).join(", "),
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(data);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Purchases");
+
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const blob = new Blob([excelBuffer], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    saveAs(blob, `purchases_${Date.now()}.xlsx`);
+  };
+
   return (
     <div className="container mt-4">
       <h2 className="mb-4">📦 Purchase Management</h2>
+
+      {/* ✅ Total Purchase Summary Box */}
+      <div className="alert alert-info d-flex justify-content-between align-items-center shadow-sm">
+        <strong>💰 Total Purchased:</strong>
+        <span className="fs-5 fw-bold text-success">
+          ₹{getTotalPurchaseAmount().toFixed(2)}
+        </span>
+      </div>
 
       {/* Add Purchase Form */}
       <form onSubmit={handleAddToCart} className="row g-2 mb-3">
@@ -108,8 +169,8 @@ export default function Purchases() {
               </tr>
             </thead>
             <tbody>
-              {purchaseCart.map((p) => (
-                <tr key={p.id}>
+              {purchaseCart.map((p, i) => (
+                <tr key={i}>
                   <td>{p.item}</td>
                   <td>{p.quantity}</td>
                   <td>₹{p.cost}</td>
@@ -123,6 +184,34 @@ export default function Purchases() {
           </button>
         </div>
       )}
+
+      {/* 🔍 Search + Export */}
+      <div className="row g-2 mb-3">
+        <div className="col-md">
+          <input
+            className="form-control"
+            placeholder="🔍 Search by supplier"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
+        <div className="col-md-auto d-flex align-items-center gap-2">
+          <button
+            className="btn btn-outline-success"
+            onClick={exportCSV}
+            disabled={!filteredPurchases.length}
+          >
+            📥 Export CSV
+          </button>
+          <button
+            className="btn btn-outline-primary"
+            onClick={exportExcel}
+            disabled={!filteredPurchases.length}
+          >
+            📊 Export Excel
+          </button>
+        </div>
+      </div>
 
       {/* Purchases History Table */}
       <div className="table-responsive">
@@ -139,8 +228,8 @@ export default function Purchases() {
             </tr>
           </thead>
           <tbody>
-            {purchases.length > 0 ? (
-              purchases
+            {filteredPurchases.length > 0 ? (
+              filteredPurchases
                 .slice()
                 .reverse()
                 .map((p, i) => (
@@ -193,7 +282,8 @@ export default function Purchases() {
                   onClick={() => setSelectedPurchase(null)}
                 ></button>
               </div>
-              <div className="modal-body">
+              {/* <div className="modal-body"> */}
+                            <div className="modal-body">
                 <p>
                   <b>Supplier:</b> {selectedPurchase.supplier} <br />
                   <b>Date:</b> {selectedPurchase.date}
@@ -208,8 +298,8 @@ export default function Purchases() {
                     </tr>
                   </thead>
                   <tbody>
-                    {selectedPurchase.items.map((it) => (
-                      <tr key={it.id}>
+                    {selectedPurchase.items.map((it, i) => (
+                      <tr key={i}>
                         <td>{it.item}</td>
                         <td>{it.quantity}</td>
                         <td>₹{it.cost}</td>
@@ -237,3 +327,5 @@ export default function Purchases() {
     </div>
   );
 }
+
+                

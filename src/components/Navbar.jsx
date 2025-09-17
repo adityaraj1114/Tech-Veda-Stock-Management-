@@ -1,6 +1,6 @@
 // src/components/Navbar.jsx
 import React, { useState, useContext, useRef } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import { useProfile } from "../context/ProfileContext";
 
@@ -11,6 +11,7 @@ const Navbar = () => {
 
   const [darkMode, setDarkMode] = useState(false);
   const collapseRef = useRef(null);
+  const navigate = useNavigate();
 
   // Collapse close helper
   const closeNavbar = () => {
@@ -25,6 +26,13 @@ const Navbar = () => {
     setDarkMode((prev) => !prev);
     document.body.classList.toggle("bg-dark");
     document.body.classList.toggle("text-light");
+  };
+
+  // Logout handler
+  const handleLogout = () => {
+    closeNavbar();      // ✅ Collapse navbar
+    logout();           // ✅ Clear auth
+    navigate("/login"); // ✅ Redirect to login
   };
 
   return (
@@ -70,15 +78,10 @@ const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
-              <Link
-                className="nav-link"
-                to="/customerlist"
-                onClick={closeNavbar}
-              >
+              <Link className="nav-link" to="/customerlist" onClick={closeNavbar}>
                 <b>Customer List</b>
               </Link>
             </li>
-
             <li className="nav-item">
               <Link className="nav-link" to="/purchase" onClick={closeNavbar}>
                 <b>Buy</b>
@@ -92,6 +95,11 @@ const Navbar = () => {
             <li className="nav-item">
               <Link className="nav-link" to="/profile" onClick={closeNavbar}>
                 <b>Profile</b>
+              </Link>
+            </li>
+            <li className="nav-item">
+              <Link className="nav-link" to="/signup" onClick={closeNavbar}>
+                <b>Sign Up</b>
               </Link>
             </li>
           </ul>
@@ -108,7 +116,7 @@ const Navbar = () => {
 
             {/* Login / Logout */}
             {user ? (
-              <button className="btn btn-danger btn-sm" onClick={logout}>
+              <button className="btn btn-danger btn-sm" onClick={handleLogout}>
                 <b>Logout</b>
               </button>
             ) : (

@@ -22,31 +22,40 @@ export const SalesProvider = ({ children }) => {
     if (!saleData || !saleData.items || saleData.items.length === 0) return;
 
     const totalSaleAmount = saleData.items.reduce(
-      (sum, it) => sum + (it.total ?? ((it.qty ?? it.quantity) * (it.price ?? it.unitPrice))),
+      (sum, it) =>
+        sum +
+        (it.total ??
+          (it.qty ?? it.quantity) * (it.price ?? it.unitPrice)),
       0
     );
+
     const paid = parseFloat(saleData.paid || 0);
 
     const entries = saleData.items.map((it) => {
-      const itemTotal = it.total ?? ((it.qty ?? it.quantity) * (it.price ?? it.unitPrice));
-      const itemPaid = totalSaleAmount ? (itemTotal / totalSaleAmount) * paid : 0;
+      const itemTotal =
+        it.total ?? (it.qty ?? it.quantity) * (it.price ?? it.unitPrice);
+
+      const itemPaid =
+        totalSaleAmount > 0 ? (itemTotal / totalSaleAmount) * paid : 0;
 
       return {
         id: Date.now() + Math.random(),
-        customer: saleData.customer.trim(),
+        customer: saleData.customer?.trim() || "Unknown",
         customerInfo: { ...saleData.customerInfo },
-        product: it.product.trim(),
-        quantity: it.qty ?? it.quantity,
-        unitPrice: it.price ?? it.unitPrice,
+        product: it.product?.trim() || "Unnamed",
+        quantity: it.qty ?? it.quantity ?? 0,
+        unitPrice: it.price ?? it.unitPrice ?? 0,
         total: itemTotal,
         paid: parseFloat(itemPaid.toFixed(2)),
         pending: parseFloat((itemTotal - itemPaid).toFixed(2)),
-        date: saleData.date || new Date().toLocaleString(),
+        date: saleData.date || new Date().toISOString(), // ✅ ISO format
       };
     });
 
-    setSales((prev) => [...prev, ...entries]);
+    // ✅ recent first
+    setSales((prev) => [...entries, ...prev]);
 
+    // ✅ update ledger
     updateCustomerLedger(saleData.customer, paid);
   };
 
@@ -65,6 +74,7 @@ export const SalesProvider = ({ children }) => {
     });
   };
 
+  // -------------------- Persist to localStorage --------------------
   useEffect(() => {
     localStorage.setItem("sales", JSON.stringify(sales));
   }, [sales]);

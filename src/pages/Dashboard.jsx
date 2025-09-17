@@ -13,12 +13,18 @@ const Dashboard = () => {
 
   const navigate = useNavigate();
 
-  // ✅ Calculate totals safely (convert to number)
-  const totalSales = sales.reduce((sum, s) => sum + Number(s.total || 0), 0);
-  const totalPurchase = purchases.reduce(
-    (sum, p) => sum + Number(p.total || 0),
+  // ✅ Calculate totals safely
+  const totalSales = sales.reduce(
+    (sum, s) => sum + (parseFloat(s.total) || (s.quantity * s.price) || 0),
     0
   );
+
+  // 🔥 Use totalCost from purchases (already aggregated in PurchaseContext)
+  const totalPurchase = purchases.reduce(
+    (sum, p) => sum + (parseFloat(p.totalCost) || 0),
+    0
+  );
+
   const profit = totalSales - totalPurchase;
 
   // ✅ Prepare transactions
@@ -27,15 +33,15 @@ const Dashboard = () => {
     type: "Sale",
     date: s.date,
     details: `${s.product} × ${s.quantity}`,
-    amount: Number(s.total || 0),
+    amount: parseFloat(s.total) || (s.quantity * s.price) || 0,
   }));
 
   const purchaseTx = purchases.map((p) => ({
     id: p.id,
     type: "Purchase",
     date: p.date,
-    details: `${p.product} × ${p.quantity}`,
-    amount: Number(p.total || 0),
+    details: `${p.items.length} items`, // ✅ Show count of purchased items
+    amount: parseFloat(p.totalCost) || 0,
   }));
 
   const transactions = [...salesTx, ...purchaseTx].sort(
@@ -64,9 +70,10 @@ const Dashboard = () => {
             onClick={() => navigate("/sale")}
           >
             <h5>Total Sales</h5>
-            <p className="fw-bold text-success">₹{totalSales}</p>
+            <p className="fw-bold text-success">₹{totalSales.toFixed(2)}</p>
           </div>
         </div>
+
         <div className="col-md-3">
           <div
             className="card shadow-sm p-3 text-center bg-light border-primary"
@@ -74,26 +81,15 @@ const Dashboard = () => {
             onClick={() => navigate("/purchase")}
           >
             <h5>Total Purchases</h5>
-            <p className="fw-bold text-primary">₹{totalPurchase}</p>
+            <p className="fw-bold text-primary">₹{totalPurchase.toFixed(2)}</p>
           </div>
         </div>
 
         <div
-  className="card shadow-sm p-3 text-center bg-light"
-  style={{ cursor: "pointer" }}
-  onClick={() => navigate("/profit-loss")}
->
-  <h5>Profit / Loss</h5>
-  <p
-    className={`fw-bold ${
-      profit >= 0 ? "text-success" : "text-danger"
-    }`}
-  >
-    ₹{profit}
-  </p>
-</div>
-
-        {/* <div className="col-md-3">
+          className="col-md-3"
+          style={{ cursor: "pointer" }}
+          onClick={() => navigate("/profit-loss")}
+        >
           <div className="card shadow-sm p-3 text-center bg-light">
             <h5>Profit / Loss</h5>
             <p
@@ -101,10 +97,11 @@ const Dashboard = () => {
                 profit >= 0 ? "text-success" : "text-danger"
               }`}
             >
-              ₹{profit}
+              ₹{profit.toFixed(2)}
             </p>
           </div>
-        </div> */}
+        </div>
+
         <div className="col-md-3">
           <div className="card shadow-sm p-3 text-center bg-light border-warning">
             <h5>Transactions</h5>
@@ -113,8 +110,18 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Current Stock */}
-      <CurrentStock inventory={inventory} />
+      {/* ✅ Current Stock with scrollable box */}
+      <div
+        className="card shadow-sm p-1 mb-4"
+        style={{
+          maxHeight: "400px", // ~10 rows max
+          overflowX: "auto",
+          overflowY: "auto",
+        }}
+      >
+        {/* <h5 className="mb-3">📦 Current Stock</h5> */}
+        <CurrentStock inventory={inventory} />
+      </div>
 
       {/* Recent Activity */}
       <div className="card shadow-sm p-3 mt-4">
@@ -150,7 +157,7 @@ const Dashboard = () => {
                       </span>
                     </td>
                     <td>{act.details}</td>
-                    <td className="fw-bold">₹{act.amount}</td>
+                    <td className="fw-bold">₹{act.amount.toFixed(2)}</td>
                   </tr>
                 ))
               )}
