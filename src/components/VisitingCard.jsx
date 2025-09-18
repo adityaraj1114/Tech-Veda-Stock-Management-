@@ -1,21 +1,15 @@
-// src/components/VisitingCard.jsx
 import React from "react";
 
 export default function VisitingCard({ form, onShare }) {
   if (!form || !form.shopName) return null;
 
-  const gradientStyle = {
-    background: "linear-gradient(135deg, #0f2027, #203a43, #2c5364)",
+  const cardStyle = {
+    background: "linear-gradient(135deg, #1e3c72, #2a5298)",
     color: "white",
-    borderRadius: "16px",
-    padding: "1.5rem",
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    boxShadow: "0 8px 20px rgba(0,0,0,0.4)",
-    maxWidth: "100%",
-    minHeight: "180px",
+    borderRadius: "20px",
+    padding: "2rem",
+    textAlign: "center",
+    boxShadow: "0 10px 30px rgba(0,0,0,0.3)",
     position: "relative",
     overflow: "hidden",
   };
@@ -24,28 +18,20 @@ export default function VisitingCard({ form, onShare }) {
     position: "absolute",
     inset: 0,
     background: "rgba(255,255,255,0.05)",
-    backdropFilter: "blur(6px)",
-    borderRadius: "16px",
+    // backdropFilter: "blur(6px)",
+    borderRadius: "20px",
+    zIndex: 0,
   };
 
   const logoStyle = {
-    height: 70,
-    width: 70,
-    marginRight: "1rem",
-    borderRadius: "12px",
+    height: 80,
+    width: 80,
+    borderRadius: "50%",
     objectFit: "cover",
     backgroundColor: "white",
-    padding: "0.4rem",
-    boxShadow: "0 4px 10px rgba(0,0,0,0.2)",
-    zIndex: 1,
-  };
-
-  const infoStyle = {
-    flex: 1,
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    gap: "4px",
+    padding: "0.5rem",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+    marginBottom: "1rem",
     zIndex: 1,
   };
 
@@ -53,9 +39,19 @@ export default function VisitingCard({ form, onShare }) {
     <strong style={{ color: "#ffd700", fontWeight: 600 }}>{text}</strong>
   );
 
+  const infoStyle = {
+    zIndex: 1,
+    position: "relative",
+    display: "flex",
+    flexDirection: "column",
+    gap: "0.4rem",
+    alignItems: "center",
+    fontSize: "1rem",
+  };
+
   return (
-    <div className="mb-4" style={{ maxWidth: 720, margin: "auto" }}>
-      <div style={gradientStyle}>
+    <div className="mb-4" style={{ maxWidth: 480, margin: "auto" }}>
+      <div style={cardStyle}>
         <div style={overlay}></div>
 
         {form.logo && (
@@ -63,12 +59,10 @@ export default function VisitingCard({ form, onShare }) {
         )}
 
         <div style={infoStyle}>
-          <h3 style={{ marginBottom: "0.5rem", fontWeight: "bold" }}>
+          <h2 style={{ fontWeight: "bold", marginBottom: "0.5rem" }}>
             {form.shopName}
-          </h3>
-          <p>
-            {label("Owner")}: {form.ownerName}
-          </p>
+          </h2>
+          <p>{label("Owner")}: {form.ownerName}</p>
           {form.phone && <p>{label("Phone")}: {form.phone}</p>}
           {form.email && <p>{label("Email")}: {form.email}</p>}
           {form.addressLine1 && (
@@ -94,7 +88,7 @@ export default function VisitingCard({ form, onShare }) {
             background: "linear-gradient(90deg,#ff9966,#ff5e62)",
             color: "white",
             border: "none",
-            borderRadius: "8px",
+            borderRadius: "10px",
             padding: "0.6rem 1.5rem",
             boxShadow: "0 4px 12px rgba(0,0,0,0.2)",
           }}

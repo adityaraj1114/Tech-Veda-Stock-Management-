@@ -32,6 +32,7 @@ export default function CustomerForm() {
   };
 
   return (
+    <>
     <div className="card shadow-sm p-3 mb-4">
       <h5>👤 Customer Details</h5>
       <div className="row g-2">
@@ -49,7 +50,7 @@ export default function CustomerForm() {
             }
           />
         </div>
-
+         <span className="col-md-6 text-muted d-flex justify-content-center align-items-center">or</span>
         {/* OR Manual Name Input */}
         <div className="col-md-6">
           <input
@@ -122,5 +123,6 @@ export default function CustomerForm() {
         </div>
       </div>
     </div>
+    </>
   );
 }

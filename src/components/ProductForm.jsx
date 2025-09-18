@@ -32,6 +32,7 @@ export default function ProductForm({
       .join(" ");
 
   return (
+    <>
     <form
       onSubmit={(e) => {
         e.preventDefault(); // ✅ prevent refresh
@@ -91,5 +92,6 @@ export default function ProductForm({
         </button>
       </div>
     </form>
+    </>
   );
 }

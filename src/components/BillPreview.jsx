@@ -138,13 +138,13 @@ export default function BillPreview({
       {/* Actions */}
       <div className="d-flex gap-2 mt-3 justify-content-center">
         <button
-          className="btn btn-primary btn-sm"
+          className="btn btn-success btn-sm"
           onClick={() => shareBillOnWhatsApp(currentTx)}
         >
           📲 WhatsApp
         </button>
         <button
-          className="btn btn-secondary btn-sm"
+          className="btn btn-primary btn-sm"
           onClick={() => downloadBillPDF(currentTx)}
         >
           📄 PDF

@@ -2,23 +2,29 @@
 import React, { useState, useMemo } from "react";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
-import * as XLSX from "xlsx"; // ✅ Excel export
+import * as XLSX from "xlsx";
 
 export default function SaleTransactions({ transactions, onView, onDelete }) {
   const [search, setSearch] = useState("");
   const [minAmt, setMinAmt] = useState("");
   const [maxAmt, setMaxAmt] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [selectedIds, setSelectedIds] = useState([]);
   const pageSize = 20;
 
-  // 🔎 Filter + Sort (Recent first)
   const filtered = useMemo(() => {
     return (transactions || [])
       .filter((tx) => {
+        const customerName = (tx.customer || "").toLowerCase();
+        const customerPhone = (tx.customerInfo?.contactPhone || "").replace(
+          /\D/g,
+          ""
+        );
+        const searchText = search.toLowerCase().replace(/\D/g, "");
+
         const matchesText =
-          (tx.customer || "")
-            .toLowerCase()
-            .includes(search.toLowerCase()) ||
+          customerName.includes(search.toLowerCase()) ||
+          customerPhone.includes(searchText) ||
           tx.items?.some((it) =>
             (it.product || "").toLowerCase().includes(search.toLowerCase())
           );
@@ -36,14 +42,12 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
       });
   }, [transactions, search, minAmt, maxAmt]);
 
-  // 📄 Pagination slice
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, currentPage]);
 
-  // 📅 Date formatting helper
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const d = new Date(dateStr);
@@ -57,19 +61,17 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
     });
   };
 
-  // ⬇️ Export to CSV
   const exportCSV = () => {
     if (!filtered.length) return;
 
     const data = filtered.map((tx) => ({
       Date: formatDate(tx.date),
       Customer: tx.customer,
+      Mobile: tx.customerInfo?.contactPhone || "—",
       "Total (₹)": parseFloat(tx.total ?? 0).toFixed(2),
       "Paid (₹)": parseFloat(tx.paid ?? 0).toFixed(2),
       "Pending (₹)": parseFloat(tx.pending ?? 0).toFixed(2),
-      Items: tx.items
-        ?.map((it) => `${it.product} (${it.quantity})`)
-        .join(", "),
+      Items: tx.items?.map((it) => `${it.product} (${it.quantity})`).join(", "),
     }));
 
     const csv = Papa.unparse(data);
@@ -77,19 +79,17 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
     saveAs(blob, `transactions_${Date.now()}.csv`);
   };
 
-  // ⬇️ Export to Excel
   const exportExcel = () => {
     if (!filtered.length) return;
 
     const data = filtered.map((tx) => ({
       Date: formatDate(tx.date),
       Customer: tx.customer,
+      Mobile: tx.customerInfo?.contactPhone || "—",
       "Total (₹)": parseFloat(tx.total ?? 0).toFixed(2),
       "Paid (₹)": parseFloat(tx.paid ?? 0).toFixed(2),
       "Pending (₹)": parseFloat(tx.pending ?? 0).toFixed(2),
-      Items: tx.items
-        ?.map((it) => `${it.product} (${it.quantity})`)
-        .join(", "),
+      Items: tx.items?.map((it) => `${it.product} (${it.quantity})`).join(", "),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -106,6 +106,36 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
     saveAs(blob, `transactions_${Date.now()}.xlsx`);
   };
 
+  const toggleSelect = (id) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllOnPage = () => {
+    const idsOnPage = paginated.map((tx) => tx.id);
+    const allSelected = idsOnPage.every((id) => selectedIds.includes(id));
+    setSelectedIds((prev) =>
+      allSelected
+        ? prev.filter((id) => !idsOnPage.includes(id))
+        : [...prev, ...idsOnPage]
+    );
+  };
+
+  const handleDeleteSelected = () => {
+    if (!selectedIds.length) return alert("No transactions selected.");
+    if (!window.confirm("Delete selected transactions?")) return;
+    selectedIds.forEach((id) => onDelete(id));
+    setSelectedIds([]);
+  };
+
+  const handleDeleteAll = () => {
+    if (!filtered.length) return;
+    if (!window.confirm("Delete all filtered transactions?")) return;
+    filtered.forEach((tx) => onDelete(tx.id));
+    setSelectedIds([]);
+  };
+
   return (
     <>
       {/* 🔍 Search + Filter */}
@@ -113,7 +143,7 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
         <div className="col-md">
           <input
             className="form-control"
-            placeholder="🔍 Search by customer or product"
+            placeholder="🔍 Search by name or mobile"
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -169,9 +199,20 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
         <table className="table table-bordered table-hover align-middle">
           <thead className="table-light">
             <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  onChange={selectAllOnPage}
+                  checked={
+                    paginated.length > 0 &&
+                    paginated.every((tx) => selectedIds.includes(tx.id))
+                  }
+                />
+              </th>
               <th>No.</th>
               <th>Date</th>
               <th>Customer</th>
+              <th>Mobile</th>
               <th>Total (₹)</th>
               <th>Paid</th>
               <th>Pending</th>
@@ -182,16 +223,24 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
           <tbody>
             {paginated.length === 0 ? (
               <tr>
-                <td colSpan={8} className="text-center text-muted">
+                <td colSpan={10} className="text-center text-muted">
                   No transactions found 🚫
                 </td>
               </tr>
             ) : (
               paginated.map((tx, i) => (
                 <tr key={tx.id || i}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(tx.id)}
+                      onChange={() => toggleSelect(tx.id)}
+                    />
+                  </td>
                   <td>{(currentPage - 1) * pageSize + i + 1}</td>
                   <td>{formatDate(tx.date)}</td>
                   <td>{tx.customer}</td>
+                  <td>{tx.customerInfo?.contactPhone || "—"}</td>
                   <td className="fw-bold">
                     ₹{parseFloat(tx.total ?? 0).toFixed(2)}
                   </td>
@@ -226,7 +275,7 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
 
       {/* 📌 Pagination Controls */}
       {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mb-5">
+        <div className="d-flex justify-content-between align-items-center mb-3">
           <button
             className="btn btn-outline-secondary"
             disabled={currentPage === 1}
@@ -246,6 +295,23 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
           </button>
         </div>
       )}
+      <hr></hr>
+      <div className="d-flex gap-2 mb-5">
+        <button
+            className="btn btn-outline-danger"
+            onClick={handleDeleteSelected}
+            disabled={!selectedIds.length}
+          >
+            🗑 Delete Selected
+          </button>
+          <button
+            className="btn btn-danger"
+            onClick={handleDeleteAll}
+            disabled={!filtered.length}
+          >
+            🧹 Delete All
+          </button>
+      </div>
     </>
   );
 }

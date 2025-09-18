@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { useCustomer } from "../context/CustomerContext";
 import { useSales } from "../context/SalesContext";
 import BillPreview from "../components/BillPreview";
+import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
@@ -137,8 +138,43 @@ Thank you!`;
       (s) => !(s.customer === cust.name && s.date === date)
     );
     updateSalePayment(updated);
-
   };
+
+  const shareBillOnWhatsApp = (tx) => {
+      const text = `🧾 Bill for ${tx.customer}
+  Date: ${tx.date}
+  
+  ${tx.items
+        .map(
+          (it, i) =>
+            `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice} = ₹${it.total}`
+        )
+        .join("\n")}
+  
+  Total: ₹${tx.total}
+  Paid: ₹${tx.paid}
+  Pending: ₹${tx.pending}
+  
+  📍 Address: ${tx.customerInfo.billingAddress || "N/A"}
+  📦 Shipping: ${tx.customerInfo.shippingAddress || "N/A"}
+  📞 Phone: ${tx.customerInfo.contactPhone || "N/A"}
+  GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
+  
+      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    };
+  
+    const downloadBillPDF = (tx) => {
+      const el = document.getElementById(`bill_${tx.id}`);
+      if (!el) return;
+      const opt = {
+        margin: 0.5,
+        filename: `Bill_${tx.customer}_${tx.id}.pdf`,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+      };
+      html2pdf().set(opt).from(el).save().catch((err) => console.error(err));
+    };
 
   const exportCSV = () => {
     const data = filteredSales.map((tx) => ({
@@ -220,12 +256,8 @@ Thank you!`;
 
         {showBillFor && (
           <BillPreview
-            shareBillOnWhatsApp={(bill) =>
-              alert(`Bill #${bill.id} shared on WhatsApp!`)
-            }
-            downloadBillPDF={(bill) =>
-              alert(`Bill #${bill.id} downloaded as PDF!`)
-            }
+            shareBillOnWhatsApp={shareBillOnWhatsApp}
+            downloadBillPDF={downloadBillPDF}
             setShowBillFor={setShowBillFor}
             showBillFor={showBillFor}
             transactions={customerSales}
