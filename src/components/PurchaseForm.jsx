@@ -48,6 +48,7 @@ export default function PurchaseForm({
       <div className="col-md">
         <input
           type="number"
+          step="0.01"
           className="form-control"
           placeholder="Cost per Unit"
           value={cost}

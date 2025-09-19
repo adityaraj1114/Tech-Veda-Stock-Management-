@@ -1,4 +1,3 @@
-// src/components/PurchaseTable.jsx
 import React, { useState, useMemo } from "react";
 
 export default function PurchaseTable({ purchases, onView, onDelete }) {
@@ -47,8 +46,6 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
 
   return (
     <div className="table-responsive mt-4">
-      {/* <h4 className="mb-3">📑 Purchase Transactions</h4> */}
-
       <table className="table table-bordered table-hover align-middle">
         <thead className="table-light">
           <tr>
@@ -84,13 +81,15 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
                 <td>{(currentPage - 1) * pageSize + i + 1}</td>
                 <td>{p.date}</td>
                 <td>{p.supplier}</td>
-                <td className="fw-bold text-danger">₹{p.totalCost}</td>
+                <td className="fw-bold text-danger">
+                  ₹{parseFloat(p.totalCost).toFixed(2)}
+                </td>
                 <td>
                   <button
                     className="btn btn-sm btn-info"
                     onClick={() => onView(p)}
                   >
-                    👁 
+                    👁
                   </button>
                 </td>
                 <td>
@@ -98,7 +97,7 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
                     className="btn btn-sm btn-danger"
                     onClick={() => onDelete(p.id)}
                   >
-                    ❌ 
+                    ❌
                   </button>
                 </td>
               </tr>
@@ -112,8 +111,9 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
           )}
         </tbody>
       </table>
+
+      {/* Pagination Controls */}
       <div className="d-flex justify-content-between align-items-center mb-4 mt-2">
-        
         <button
           className="btn btn-sm btn-outline-secondary ms-2"
           disabled={currentPage === 1}
@@ -121,7 +121,7 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
         >
           ⬅️ Previous
         </button>
-        <span> Page {currentPage} of {totalPages} </span>
+        <span>Page {currentPage} of {totalPages}</span>
         <button
           className="btn btn-sm btn-outline-secondary ms-1"
           disabled={currentPage === totalPages}
@@ -133,7 +133,7 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
 
       {/* Bulk Actions */}
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="flex gap-2">
+        <div className="d-flex gap-2">
           <button
             className="btn btn-sm btn-danger me-2"
             onClick={handleDeleteSelected}

@@ -83,6 +83,11 @@ const Navbar = () => {
               </Link>
             </li>
             <li className="nav-item">
+              <Link className="nav-link" to="/sellerlist" onClick={closeNavbar}>
+                <b>Seller List</b>
+              </Link>
+            </li>
+            <li className="nav-item">
               <Link className="nav-link" to="/purchase" onClick={closeNavbar}>
                 <b>Buy</b>
               </Link>

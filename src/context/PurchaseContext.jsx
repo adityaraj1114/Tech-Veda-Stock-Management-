@@ -18,14 +18,17 @@ export const PurchaseProvider = ({ children }) => {
 
   // -------------------- Purchase Cart --------------------
   const addToPurchaseCart = (itemData) => {
+    const quantity = parseFloat(itemData.quantity);
+    const cost = parseFloat(itemData.cost);
+
     setPurchaseCart((prev) => [
       ...prev,
       {
         id: Date.now() + Math.random(),
         item: itemData.item.trim(),
-        quantity: parseInt(itemData.quantity, 10),
-        cost: parseFloat(itemData.cost),
-        totalCost: parseInt(itemData.quantity, 10) * parseFloat(itemData.cost),
+        quantity,
+        cost,
+        totalCost: quantity * cost,
       },
     ]);
   };
@@ -50,7 +53,7 @@ export const PurchaseProvider = ({ children }) => {
   const clearPurchaseCart = () => setPurchaseCart([]);
 
   const addPurchase = ({ supplier, item, quantity, cost }) => {
-    const qty = parseInt(quantity, 10);
+    const qty = parseFloat(quantity);
     const price = parseFloat(cost);
 
     setPurchases((prev) => [
@@ -92,7 +95,7 @@ export const PurchaseProvider = ({ children }) => {
 
   // ✅ Total Purchased Amount
   const getTotalPurchaseAmount = () =>
-    purchases.reduce((sum, p) => sum + (p.totalCost || 0), 0);
+    purchases.reduce((sum, p) => sum + (parseFloat(p.totalCost) || 0), 0);
 
   // ✅ Persist to localStorage
   useEffect(() => {
@@ -110,7 +113,7 @@ export const PurchaseProvider = ({ children }) => {
         addPurchase,
         deletePurchase,
         getPurchasedItems,
-        getTotalPurchaseAmount, // ✅ exposed
+        getTotalPurchaseAmount,
       }}
     >
       {children}

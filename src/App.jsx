@@ -11,6 +11,7 @@ import Purchase from "./pages/Purchase";
 import Sale from "./pages/Sale";
 import Profile from "./pages/Profile";
 import CustomerList from "./pages/CustomerList";
+// import SellerList from "./pages/SellerList";
 import CustomerDetails from "./pages/CustomerDetails";
 import ProfitLossReport from "./pages/ProfitLossReport";
 
@@ -90,6 +91,15 @@ function App() {
                         </PrivateRoute>
                       }
                     />
+
+                    {/* <Route
+                      path="/sellerlist"
+                      element={
+                        <PrivateRoute>
+                          <SellerList />
+                        </PrivateRoute>
+                      }
+                    /> */}
 
                     <Route
                       path="/customers/:id"

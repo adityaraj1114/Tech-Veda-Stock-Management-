@@ -241,6 +241,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         setShowBillFor={setShowBillFor}
         showBillFor={showBillFor}
         transactions={transactions}
+        // transactions={customerSales}
         tx={transactions.find((t) => t.id === showBillFor)}
       />
 

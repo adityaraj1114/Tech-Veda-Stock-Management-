@@ -10,7 +10,6 @@ import PurchaseFilters from "../components/PurchaseFilters";
 import PurchaseTable from "../components/PurchaseTable";
 import PurchaseModal from "../components/PurchaseModal";
 
-
 export default function Purchases() {
   const {
     purchases,
@@ -19,6 +18,7 @@ export default function Purchases() {
     completePurchase,
     deletePurchase,
     getTotalPurchaseAmount,
+    setPurchaseCart,
   } = usePurchase();
 
   const [supplier, setSupplier] = useState("");
@@ -48,6 +48,12 @@ export default function Purchases() {
     setQuantity("");
     setCost("");
   };
+
+  const handleRemoveItem = (id) => {
+  setPurchaseCart((prev) => prev.filter((item) => item.id !== id));
+};
+
+
 
   const handleCompletePurchase = () => {
     if (!supplier || purchaseCart.length === 0) return;
@@ -143,6 +149,7 @@ export default function Purchases() {
         purchases={filteredPurchases}
         onView={setSelectedPurchase}
         onDelete={deletePurchase}
+        handleRemoveItem={handleRemoveItem}
       />
 
       {/* ✅ View Modal */}
