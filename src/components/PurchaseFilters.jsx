@@ -1,22 +1,40 @@
 // src/components/PurchaseFilters.jsx
 import React from "react";
 
-export default function PurchaseFilters({ search, setSearch, exportCSV, exportExcel, disabled }) {
+export default function PurchaseFilters({
+  search = "",
+  setSearch,
+  exportCSV,
+  exportExcel,
+  disabled = false,
+}) {
   return (
-    <div className="row g-2 mb-3">
+    <div className="row g-2 mb-3 align-items-center">
+      {/* Search Input */}
       <div className="col-md">
         <input
+          type="text"
           className="form-control"
-          placeholder="🔍 Search by supplier"
+          placeholder="🔍 Search by supplier..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
       </div>
-      <div className="col-md-auto d-flex align-items-center gap-2">
-        <button className="btn btn-outline-success" onClick={exportCSV} disabled={disabled}>
+
+      {/* Export Buttons */}
+      <div className="col-md-auto d-flex gap-2">
+        <button
+          className="btn btn-outline-success fw-bold"
+          onClick={exportCSV}
+          disabled={disabled}
+        >
           📥 Export CSV
         </button>
-        <button className="btn btn-outline-primary" onClick={exportExcel} disabled={disabled}>
+        <button
+          className="btn btn-outline-primary fw-bold"
+          onClick={exportExcel}
+          disabled={disabled}
+        >
           📊 Export Excel
         </button>
       </div>

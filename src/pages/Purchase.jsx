@@ -1,4 +1,6 @@
+// src/pages/Purchases.jsx
 import React, { useState, useMemo } from "react";
+import { motion } from "framer-motion";
 import { usePurchase } from "../context/PurchaseContext";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
@@ -50,10 +52,8 @@ export default function Purchases() {
   };
 
   const handleRemoveItem = (id) => {
-  setPurchaseCart((prev) => prev.filter((item) => item.id !== id));
-};
-
-
+    setPurchaseCart((prev) => prev.filter((item) => item.id !== id));
+  };
 
   const handleCompletePurchase = () => {
     if (!supplier || purchaseCart.length === 0) return;
@@ -102,57 +102,119 @@ export default function Purchases() {
 
   return (
     <div className="container mt-4">
-      <h2 className="mb-4">📦 Purchase Management</h2>
+      {/* Page Heading */}
+      <motion.h2
+        className="mb-4 fw-bold text-center"
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        style={{
+          background: "linear-gradient(90deg, #ff6a00, #ee0979)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          fontSize: "1.6rem",
+        }}
+      >
+        📦 Purchase Management
+      </motion.h2>
 
-      {/* ✅ Total Purchase Summary Box */}
-      <div className="alert alert-info d-flex justify-content-between align-items-center shadow-sm">
-        <strong>💰 Total Purchased:</strong>
-        <span className="fs-5 fw-bold text-success">
+      {/* Total Purchase Summary Box */}
+      <motion.div
+        className="p-3 mb-4 rounded-4 shadow-sm text-center"
+        style={{
+          // background: "rgba(255, 255, 255, 0.15)",
+                          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <strong className="fs-5 text-white pt-2 pb-2 m-2">💰 Total Purchased: </strong>
+        <span className="fs-4 fw-bold text-white ms-2 bg-success bg-opacity-10 p-2 rounded-3">
           ₹{getTotalPurchaseAmount().toFixed(2)}
         </span>
-      </div>
+      </motion.div>
 
-      {/* ✅ Purchase Form */}
-      <PurchaseForm
-        supplier={supplier}
-        setSupplier={setSupplier}
-        item={item}
-        setItem={setItem}
-        quantity={quantity}
-        setQuantity={setQuantity}
-        cost={cost}
-        setCost={setCost}
-        handleAddToCart={handleAddToCart}
-      />
-
-      {/* ✅ Cart Table */}
-      {purchaseCart.length > 0 && (
-        <PurchaseCart
-          purchaseCart={purchaseCart}
-          handleCompletePurchase={handleCompletePurchase}
+      {/* Purchase Form */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.4 }}
+      >
+        <PurchaseForm
+          supplier={supplier}
+          setSupplier={setSupplier}
+          item={item}
+          setItem={setItem}
+          quantity={quantity}
+          setQuantity={setQuantity}
+          cost={cost}
+          setCost={setCost}
+          handleAddToCart={handleAddToCart}
         />
+      </motion.div>
+
+      {/* Cart Table */}
+      {purchaseCart.length > 0 && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.5 }}
+        >
+          <PurchaseCart
+            purchaseCart={purchaseCart}
+            handleCompletePurchase={handleCompletePurchase}
+            handleRemoveItem={handleRemoveItem}
+          />
+        </motion.div>
       )}
 
-      <h3 className="mb-3 mt-5">📑 Purchase Transactions</h3>
+      {/* Section Heading */}
+      <motion.h3
+        className="mb-3 mt-5 fw-semibold text-center"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        style={{
+          background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+        }}
+      >
+        📑 Purchase Transactions
+      </motion.h3>
 
-      {/* ✅ Search + Export */}
-      <PurchaseFilters
-        search={search}
-        setSearch={setSearch}
-        exportCSV={exportCSV}
-        exportExcel={exportExcel}
-        disabled={!filteredPurchases.length}
-      />
+      {/* Search + Export */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
+        <PurchaseFilters
+          search={search}
+          setSearch={setSearch}
+          exportCSV={exportCSV}
+          exportExcel={exportExcel}
+          disabled={!filteredPurchases.length}
+        />
+      </motion.div>
 
-      {/* ✅ Purchase Table */}
-      <PurchaseTable
-        purchases={filteredPurchases}
-        onView={setSelectedPurchase}
-        onDelete={deletePurchase}
-        handleRemoveItem={handleRemoveItem}
-      />
+      {/* Purchase Table */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8 }}
+      >
+        <PurchaseTable
+          purchases={filteredPurchases}
+          onView={setSelectedPurchase}
+          onDelete={deletePurchase}
+        />
+      </motion.div>
 
-      {/* ✅ View Modal */}
+      {/* View Modal */}
       <PurchaseModal
         purchase={selectedPurchase}
         onClose={() => setSelectedPurchase(null)}

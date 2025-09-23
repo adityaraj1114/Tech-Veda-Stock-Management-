@@ -5,6 +5,15 @@ import { useNavigate } from "react-router-dom";
 import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
+import { motion } from "framer-motion";
+import {
+  FileSpreadsheet,
+  FileText,
+  Users,
+  Trash2,
+  Eye,
+  Search,
+} from "lucide-react";
 
 export default function CustomerList() {
   const { customers = [], deleteCustomer } = useCustomer();
@@ -122,23 +131,30 @@ export default function CustomerList() {
   };
 
   return (
-    <div className="container mt-4">
-      <div className="mb-3">
-        <h2>🧑‍🤝‍🧑 Customers</h2>
-        <div className="d-flex gap-2 mt-3">
+    <motion.div
+      className="container mt-4"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+    >
+      {/* Header */}
+      <div className="mb-4 d-flex align-items-center justify-content-between">
+        <h2 className="fw-bold text-gradient d-flex align-items-center gap-2">
+          <Users /> Customers
+        </h2>
+        <div className="d-flex gap-2">
           <button
-            className="btn btn-outline-success"
+            className="btn btn-outline-success d-flex align-items-center gap-1"
             onClick={exportCSV}
             disabled={!filtered.length}
           >
-            📥 Export CSV
+            <FileText size={18} /> CSV
           </button>
           <button
-            className="btn btn-outline-primary"
+            className="btn btn-outline-primary d-flex align-items-center gap-1"
             onClick={exportExcel}
             disabled={!filtered.length}
           >
-            📊 Export Excel
+            <FileSpreadsheet size={18} /> Excel
           </button>
         </div>
       </div>
@@ -146,13 +162,18 @@ export default function CustomerList() {
       {/* Search & Filter */}
       <div className="row mb-3">
         <div className="col-md-6 mb-2">
-          <input
-            type="text"
-            className="form-control"
-            placeholder="Search by name or phone..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="input-group">
+            <span className="input-group-text bg-light">
+              <Search size={16} />
+            </span>
+            <input
+              type="text"
+              className="form-control"
+              placeholder="Search by name or phone..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
         <div className="col-md-6 mb-2">
           <select
@@ -170,12 +191,17 @@ export default function CustomerList() {
         </div>
       </div>
 
+      {/* Table */}
       {paginated.length === 0 ? (
-        <p className="text-muted">No customers found 🚫</p>
+        <p className="text-muted">🚫 No customers found</p>
       ) : (
-        <div style={{ overflowX: "auto" }}>
-          <table className="table table-bordered align-middle">
-            <thead className="table-light">
+        <motion.div
+          style={{ overflowX: "auto" }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+        >
+          <table className="table table-hover align-middle shadow-sm">
+            <thead className="table-dark">
               <tr>
                 <th>No.</th>
                 <th>Name</th>
@@ -188,7 +214,11 @@ export default function CustomerList() {
             </thead>
             <tbody>
               {paginated.map((c, i) => (
-                <tr key={c.id ?? `${c.name}_${normalizePhone(c.contactPhone)}`}>
+                <motion.tr
+                  key={c.id ?? `${c.name}_${normalizePhone(c.contactPhone)}`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
                   <td>{(page - 1) * pageSize + i + 1}</td>
                   <td>{c.name}</td>
                   <td>{c.contactPhone || "—"}</td>
@@ -201,13 +231,13 @@ export default function CustomerList() {
                   </td>
                   <td className="d-flex gap-2">
                     <button
-                      className="btn btn-sm btn-info"
+                      className="btn btn-sm btn-info d-flex align-items-center gap-1"
                       onClick={() => navigate(`/customers/${c.id}`)}
                     >
-                      View
+                      <Eye size={14} /> View
                     </button>
                     <button
-                      className="btn btn-sm btn-danger"
+                      className="btn btn-sm btn-danger d-flex align-items-center gap-1"
                       onClick={() => {
                         if (
                           window.confirm(
@@ -218,18 +248,13 @@ export default function CustomerList() {
                         }
                       }}
                     >
-                      Delete
+                      <Trash2 size={14} /> Delete
                     </button>
                   </td>
-                </tr>
+                </motion.tr>
               ))}
             </tbody>
-            <tfoot
-              className="table-light fw-bold"
-              onClick={() => setFilterType("pending")}
-              style={{ cursor: "pointer" }}
-              title="Click to filter pending customers"
-            >
+            <tfoot className="table-light fw-bold">
               <tr>
                 <td colSpan={3} className="text-end">
                   TOTAL
@@ -243,7 +268,7 @@ export default function CustomerList() {
               </tr>
             </tfoot>
           </table>
-        </div>
+        </motion.div>
       )}
 
       {/* Pagination Controls */}
@@ -268,6 +293,6 @@ export default function CustomerList() {
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }

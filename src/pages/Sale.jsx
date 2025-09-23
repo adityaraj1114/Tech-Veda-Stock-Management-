@@ -1,4 +1,6 @@
+// src/pages/Sales.jsx
 import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 import { useCustomer } from "../context/CustomerContext";
 import { useSales } from "../context/SalesContext";
@@ -18,7 +20,7 @@ export default function Sales() {
     customerInfo,
     setCustomerInfo,
   } = useCustomer();
-  const { addSale, setTotalSales } = useSales(); // ✅ assuming setTotalSales is exposed
+  const { addSale, setTotalSales } = useSales();
   const { getInventory } = useInventory();
 
   const [paidAmount, setPaidAmount] = useState("");
@@ -66,7 +68,7 @@ export default function Sales() {
   useEffect(() => {
     localStorage.setItem("transactions", JSON.stringify(transactions));
     const total = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
-    setTotalSales?.(total); // ✅ update context for dashboard
+    setTotalSales?.(total);
   }, [transactions, setTotalSales]);
 
   const [showBillFor, setShowBillFor] = useState(null);
@@ -191,65 +193,112 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
     };
-    html2pdf().set(opt).from(el).save().catch((err) => console.error(err));
+    html2pdf()
+      .set(opt)
+      .from(el)
+      .save()
+      .catch((err) => console.error(err));
   };
 
-  // ✅ Total Sales Calculation
   const totalSales = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
 
   return (
     <div className="container py-4">
-      <h2 className="mb-4">💰 Sales Management</h2>
+      {/* Page Heading */}
+      <motion.h2
+        className="mb-4 fw-bold text-center"
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        style={{
+          background: "linear-gradient(90deg, #075a53ff, #09a344ff)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          fontSize: "1.6rem",
+        }}
+      >
+        💰 Sales Management
+      </motion.h2>
 
       {/* ✅ Total Sales Summary Box */}
-      <div className="alert alert-info d-flex justify-content-between align-items-center">
-        <strong>📊 Total Sales:</strong>
-        <span className="fs-5 fw-bold text-success">₹{totalSales.toFixed(2)}</span>
-      </div>
+      <motion.div
+        className="p-3 mb-4 rounded-4 shadow-sm text-center text-white"
+        style={{
+          // background: "rgba(255, 255, 255, 0.15)",
+                          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
 
-      <CustomerForm />
-      <ProductForm
-        product={product}
-        setProduct={setProduct}
-        quantity={quantity}
-        setQuantity={setQuantity}
-        price={price}
-        setPrice={setPrice}
-        productOptions={productOptions}
-        handleAddToCart={handleAddToCart}
-      />
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <strong className="fs-5">📊 Total Sales: </strong>
+        <span className="fs-4 fw-bold ms-2">
+          ₹{totalSales.toFixed(2)}
+        </span>
+      </motion.div>
 
-      <CartTable
-        cart={cart}
-        removeFromCart={removeFromCart}
-        handleFinalizeSale={handleFinalizeSale}
-      />
+      {/* Customer Form */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+        <CustomerForm />
+      </motion.div>
 
-      <div className="mb-3">
+      {/* Product Form */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+        <ProductForm
+          product={product}
+          setProduct={setProduct}
+          quantity={quantity}
+          setQuantity={setQuantity}
+          price={price}
+          setPrice={setPrice}
+          productOptions={productOptions}
+          handleAddToCart={handleAddToCart}
+        />
+      </motion.div>
+
+      {/* Cart Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+        <CartTable
+          cart={cart}
+          removeFromCart={removeFromCart}
+          handleFinalizeSale={handleFinalizeSale}
+        />
+      </motion.div>
+
+      {/* Paid Amount Input */}
+      <motion.div className="mb-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
         <input
           type="number"
-          className="form-control"
-          placeholder="Paid Amount"
+          className="form-control shadow-sm"
+          placeholder="💵 Paid Amount"
           value={paidAmount}
           onChange={(e) => setPaidAmount(e.target.value)}
         />
-      </div>
+      </motion.div>
 
-      <BillPreview
-        shareBillOnWhatsApp={shareBillOnWhatsApp}
-        downloadBillPDF={downloadBillPDF}
-        setShowBillFor={setShowBillFor}
-        showBillFor={showBillFor}
-        transactions={transactions}
-        // transactions={customerSales}
-        tx={transactions.find((t) => t.id === showBillFor)}
-      />
+      {/* Bill Preview */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+        <BillPreview
+          shareBillOnWhatsApp={shareBillOnWhatsApp}
+          downloadBillPDF={downloadBillPDF}
+          setShowBillFor={setShowBillFor}
+          showBillFor={showBillFor}
+          transactions={transactions}
+          tx={transactions.find((t) => t.id === showBillFor)}
+        />
+      </motion.div>
 
-      <SaleTransactions
-        transactions={transactions}
-        onView={setShowBillFor}
-        onDelete={handleDeleteTx}
-      />
+      {/* Transactions Table */}
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
+        <SaleTransactions
+          transactions={transactions}
+          onView={setShowBillFor}
+          onDelete={handleDeleteTx}
+        />
+      </motion.div>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+// src/components/PurchaseTable.jsx
 import React, { useState, useMemo } from "react";
 
 export default function PurchaseTable({ purchases, onView, onDelete }) {
@@ -6,12 +7,10 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
   const pageSize = 20;
 
   const totalPages = Math.ceil(purchases.length / pageSize);
+
   const paginatedPurchases = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return purchases
-      .slice()
-      .reverse()
-      .slice(start, start + pageSize);
+    return purchases.slice().reverse().slice(start, start + pageSize);
   }, [purchases, currentPage]);
 
   const toggleSelect = (id) => {
@@ -46,8 +45,13 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
 
   return (
     <div className="table-responsive mt-4">
-      <table className="table table-bordered table-hover align-middle">
-        <thead className="table-light">
+      <table className="table align-middle table-hover shadow-sm rounded-3">
+        <thead
+          style={{
+            background: "linear-gradient(135deg, #6a11cb, #2575fc)",
+            color: "#fff",
+          }}
+        >
           <tr>
             <th>
               <input
@@ -70,7 +74,7 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
         <tbody>
           {paginatedPurchases.length > 0 ? (
             paginatedPurchases.map((p, i) => (
-              <tr key={p.id}>
+              <tr key={p.id} className="table-light">
                 <td>
                   <input
                     type="checkbox"
@@ -86,7 +90,12 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
                 </td>
                 <td>
                   <button
-                    className="btn btn-sm btn-info"
+                    className="btn btn-sm btn-info fw-bold"
+                    style={{
+                      background: "linear-gradient(45deg, #17ead9, #6078ea)",
+                      border: "none",
+                      color: "#fff",
+                    }}
                     onClick={() => onView(p)}
                   >
                     👁
@@ -94,7 +103,12 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
                 </td>
                 <td>
                   <button
-                    className="btn btn-sm btn-danger"
+                    className="btn btn-sm btn-danger fw-bold"
+                    style={{
+                      background: "linear-gradient(45deg, #ff416c, #ff4b2b)",
+                      border: "none",
+                      color: "#fff",
+                    }}
                     onClick={() => onDelete(p.id)}
                   >
                     ❌
@@ -113,17 +127,19 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
       </table>
 
       {/* Pagination Controls */}
-      <div className="d-flex justify-content-between align-items-center mb-4 mt-2">
+      <div className="d-flex justify-content-between align-items-center mb-3 mt-2">
         <button
-          className="btn btn-sm btn-outline-secondary ms-2"
+          className="btn btn-sm btn-outline-secondary"
           disabled={currentPage === 1}
           onClick={() => setCurrentPage((p) => p - 1)}
         >
           ⬅️ Previous
         </button>
-        <span>Page {currentPage} of {totalPages}</span>
+        <span className="fw-bold">
+          Page {currentPage} of {totalPages}
+        </span>
         <button
-          className="btn btn-sm btn-outline-secondary ms-1"
+          className="btn btn-sm btn-outline-secondary"
           disabled={currentPage === totalPages}
           onClick={() => setCurrentPage((p) => p + 1)}
         >
@@ -132,23 +148,26 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
       </div>
 
       {/* Bulk Actions */}
-      <div className="d-flex justify-content-between align-items-center mb-4">
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-sm btn-danger me-2"
-            onClick={handleDeleteSelected}
-            disabled={!selectedIds.length}
-          >
-            🗑 Delete Selected
-          </button>
-          <button
-            className="btn btn-sm btn-outline-danger"
-            onClick={handleDeleteAll}
-            disabled={!purchases.length}
-          >
-            🧹 Delete All
-          </button>
-        </div>
+      <div className="d-flex justify-content-start gap-2 mb-4">
+        <button
+          className="btn btn-sm fw-bold"
+          style={{
+            background: "linear-gradient(45deg, #ff416c, #ff4b2b)",
+            color: "#fff",
+            border: "none",
+          }}
+          onClick={handleDeleteSelected}
+          disabled={!selectedIds.length}
+        >
+          🗑 Delete Selected
+        </button>
+        <button
+          className="btn btn-sm btn-outline-danger fw-bold"
+          onClick={handleDeleteAll}
+          disabled={!purchases.length}
+        >
+          🧹 Delete All
+        </button>
       </div>
     </div>
   );

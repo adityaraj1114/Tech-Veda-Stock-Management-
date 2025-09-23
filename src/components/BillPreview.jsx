@@ -22,35 +22,32 @@ export default function BillPreview({
 
   // Find the transaction to preview
   const currentTx = transactions.find((t) => t.id === showBillFor);
-
   if (!showBillFor || !currentTx) return null;
 
   // Calculate totals
   const grandTotal =
     currentTx.items?.reduce(
-      (sum, it) => sum + ((it.unitPrice || 0) * (it.quantity || 0)),
+      (sum, it) => sum + (it.unitPrice || 0) * (it.quantity || 0),
       0
     ) || 0;
 
-  // Prefer transaction-level paid if available, else sum item-level paid
   const paid =
     typeof currentTx.paid === "number"
       ? currentTx.paid
       : currentTx.items?.reduce((sum, it) => sum + (it.paid || 0), 0) || 0;
 
-  // Always calculate pending from grandTotal - paid
   const pending = grandTotal - paid;
 
   return (
     <>
       <div
         id={`bill_${currentTx.id}`}
-        className="border bg-white pt-3 p-2 mb-4 shadow mt-5"
+        className="border bg-white pt-3 p-3 mb-4 shadow mt-5 rounded"
         style={{ maxWidth: "800px", margin: "auto" }}
       >
         {/* Shop Details Header */}
         <div className="text-center border-bottom pb-2 mb-3">
-          <h2 className="mb-1">{shopName}</h2>
+          <h2 className="mb-1 fw-bold">{shopName}</h2>
           <p className="mb-1">
             <b>Address : </b>
             {[
@@ -64,32 +61,27 @@ export default function BillPreview({
               .join(", ")}
           </p>
           <p className="mb-1">
-            📞 {profile?.phone || "-"} | <b>GSTIN:</b> {profile?.gstin || "-"}
+            📞 {profile?.phone || "-"} | <b>GSTIN:</b>{" "}
+            {profile?.gstin || "-"}
           </p>
           <small className="text-muted">Tax Invoice</small>
         </div>
 
         {/* Invoice Meta Info */}
-        <div className="d-flex justify-content-between mb-3 lh-sm">
-          <div>
-            <p>
-              <b>Invoice ID:</b> {currentTx.id}
-            </p>
-            <p>
-              <b>Date:</b> {currentTx.date}
-            </p>
-          </div>
-          <div className="text-start lh-1">
-            <p>
-              <b>Customer:</b> {currentTx.customer}
-            </p>
-            <p>
-              <b>Phone:</b> {currentTx.customerInfo?.contactPhone || "-"}
-            </p>
-            <p>
-              <b>Address:</b> {currentTx.customerInfo?.billingAddress || "-"}
-            </p>
-          </div>
+        <div className="d-flex justify-content-between mb-2 lh-sm fw-semibold">
+          <span>Invoice ID: {currentTx.id}</span>
+          <span>Date: {currentTx.date}</span>
+        </div>
+        <div className="mb-3 lh-sm">
+          <p className="mb-1">
+            <b>Customer:</b> {currentTx.customer}
+          </p>
+          <p className="mb-1">
+            <b>Phone:</b> {currentTx.customerInfo?.contactPhone || "-"}
+          </p>
+          <p className="mb-0">
+            <b>Address:</b> {currentTx.customerInfo?.billingAddress || "-"}
+          </p>
         </div>
 
         {/* Items Table */}
@@ -98,9 +90,9 @@ export default function BillPreview({
             <tr>
               <th>#</th>
               <th>Description</th>
-              <th>Qty</th>
-              <th>Unit Price</th>
-              <th>Total</th>
+              <th className="text-center">Qty</th>
+              <th className="text-end">Unit Price</th>
+              <th className="text-end">Total</th>
             </tr>
           </thead>
           <tbody>
@@ -108,9 +100,11 @@ export default function BillPreview({
               <tr key={i}>
                 <td>{i + 1}</td>
                 <td>{it.product}</td>
-                <td>{it.quantity}</td>
-                <td>{formatCurrency(it.unitPrice)}</td>
-                <td>{formatCurrency((it.unitPrice || 0) * (it.quantity || 0))}</td>
+                <td className="text-center">{it.quantity}</td>
+                <td className="text-end">{formatCurrency(it.unitPrice)}</td>
+                <td className="text-end">
+                  {formatCurrency((it.unitPrice || 0) * (it.quantity || 0))}
+                </td>
               </tr>
             ))}
           </tbody>

@@ -1,7 +1,8 @@
 // src/components/ProductForm.jsx
 import React, { useContext } from "react";
 import { InventoryContext } from "../context/InventoryContext";
-import Select from "react-select"; // ✅ searchable dropdown
+import Select from "react-select";
+import { motion } from "framer-motion";
 
 export default function ProductForm({
   product,
@@ -15,7 +16,7 @@ export default function ProductForm({
 }) {
   const { purchases } = useContext(InventoryContext);
 
-  // Unique product names from purchases
+  // Unique product names from purchases (normalized)
   const uniqueProducts = [
     ...new Set(
       purchases
@@ -28,19 +29,31 @@ export default function ProductForm({
   const formatProduct = (prod) =>
     prod
       .split(" ")
-      .map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : ""))
+      .map((w) =>
+        w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : ""
+      )
       .join(" ");
 
   return (
-    <>
-    <form
+    <motion.form
       onSubmit={(e) => {
-        e.preventDefault(); // ✅ prevent refresh
-        handleAddToCart(); // ✅ call without passing event
+        e.preventDefault();
+        handleAddToCart();
       }}
-      className="row g-2 mb-3 card p-3 shadow-sm"
+      className="row g-3 mb-4 card shadow-lg p-4 border-0 m-1"
+      style={{
+        // background: "linear-gradient(135deg, #f3e5f5, #e3f2fd, #e0f7fa)",
+                        background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
+
+        borderRadius: "20px",
+      }}
+      initial={{ opacity: 0, y: 30 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      <h5>🛒 Add Product</h5>
+      <h4 className="fw-bold text-white d-flex align-items-center mb-3">
+        🛒 Add Product
+      </h4>
 
       {/* Product Select */}
       <div className="col-md-4">
@@ -55,6 +68,15 @@ export default function ProductForm({
           isClearable
           className="react-select-container"
           classNamePrefix="react-select"
+          styles={{
+            control: (base) => ({
+              ...base,
+              borderRadius: "12px",
+              borderColor: "#90caf9",
+              boxShadow: "none",
+              padding: "4px",
+            }),
+          }}
         />
       </div>
 
@@ -62,8 +84,8 @@ export default function ProductForm({
       <div className="col-md-3">
         <input
           type="number"
-          className="form-control"
-          placeholder="Quantity"
+          className="form-control rounded-3"
+          placeholder="📦 Quantity"
           min="1"
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
@@ -75,8 +97,8 @@ export default function ProductForm({
       <div className="col-md-3">
         <input
           type="number"
-          className="form-control"
-          placeholder="Unit Price (₹)"
+          className="form-control rounded-3"
+          placeholder="💲 Unit Price (₹)"
           min="0"
           step="any"
           value={price}
@@ -87,11 +109,15 @@ export default function ProductForm({
 
       {/* Add Button */}
       <div className="col-md-2 d-grid">
-        <button type="submit" className="btn btn-primary">
+        <motion.button
+          type="submit"
+          className="btn btn-success fw-bold rounded-4 shadow-sm"
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
           ➕ Add
-        </button>
+        </motion.button>
       </div>
-    </form>
-    </>
+    </motion.form>
   );
 }
