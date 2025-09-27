@@ -1,5 +1,4 @@
-// src/pages/Purchases.jsx
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
 import { usePurchase } from "../context/PurchaseContext";
 import Papa from "papaparse";
@@ -21,46 +20,63 @@ export default function Purchases() {
     deletePurchase,
     getTotalPurchaseAmount,
     setPurchaseCart,
+    sellingPriceHistory,
   } = usePurchase();
 
   const [supplier, setSupplier] = useState("");
   const [item, setItem] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [cost, setCost] = useState("");
+  const [buyingPrice, setBuyingPrice] = useState("");
+  const [sellingPrice, setSellingPrice] = useState("");
   const [selectedPurchase, setSelectedPurchase] = useState(null);
   const [search, setSearch] = useState("");
 
+  // normalize key
+  const normalizeKey = (s) => (s || "").toString().trim().toLowerCase();
+
+  // ✅ Auto-fill selling price if exists
+  useEffect(() => {
+    if (item) {
+      const histPrice = sellingPriceHistory?.[normalizeKey(item)];
+      if (histPrice !== undefined && histPrice !== null) {
+        setSellingPrice(histPrice.toString());
+      }
+    }
+  }, [item, sellingPriceHistory]);
+
+  // ✅ Filter purchases
   const filteredPurchases = useMemo(() => {
     return purchases.filter((p) =>
       p.supplier.toLowerCase().includes(search.toLowerCase())
     );
   }, [purchases, search]);
 
-  const handleAddToCart = (e) => {
-    e.preventDefault();
-    if (!supplier || !item || !quantity || !cost) return;
+  // ✅ Add to cart
+  const handleAddToCart = (newPurchase) => {
+    addToPurchaseCart(newPurchase);
 
-    addToPurchaseCart({
-      item,
-      quantity: parseInt(quantity, 10),
-      cost: parseFloat(cost),
-    });
-
+    // reset fields (supplier stays!)
     setItem("");
     setQuantity("");
-    setCost("");
+    setBuyingPrice("");
+    setSellingPrice("");
   };
 
+  // ✅ Remove from cart
   const handleRemoveItem = (id) => {
     setPurchaseCart((prev) => prev.filter((item) => item.id !== id));
   };
 
+  // ✅ Complete purchase
   const handleCompletePurchase = () => {
     if (!supplier || purchaseCart.length === 0) return;
     completePurchase(supplier);
+
+    // ✅ reset supplier after full purchase
     setSupplier("");
   };
 
+  // ✅ Export CSV
   const exportCSV = () => {
     if (!filteredPurchases.length) return;
 
@@ -68,7 +84,13 @@ export default function Purchases() {
       Date: p.date,
       Supplier: p.supplier,
       "Total Cost (₹)": p.totalCost.toFixed(2),
-      Items: p.items.map((it) => `${it.item} (${it.quantity})`).join(", "),
+      Items: p.items
+        .map(
+          (it) =>
+            `${it.item} (${it.quantity}) @ ₹${it.buyingPrice}` +
+            (it.sellingPrice ? ` → SP: ₹${it.sellingPrice}` : "")
+        )
+        .join(", "),
     }));
 
     const csv = Papa.unparse(data);
@@ -76,6 +98,7 @@ export default function Purchases() {
     saveAs(blob, `purchases_${Date.now()}.csv`);
   };
 
+  // ✅ Export Excel
   const exportExcel = () => {
     if (!filteredPurchases.length) return;
 
@@ -83,7 +106,13 @@ export default function Purchases() {
       Date: p.date,
       Supplier: p.supplier,
       "Total Cost (₹)": p.totalCost.toFixed(2),
-      Items: p.items.map((it) => `${it.item} (${it.quantity})`).join(", "),
+      Items: p.items
+        .map(
+          (it) =>
+            `${it.item} (${it.quantity}) @ ₹${it.buyingPrice}` +
+            (it.sellingPrice ? ` → SP: ₹${it.sellingPrice}` : "")
+        )
+        .join(", "),
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(data);
@@ -101,7 +130,7 @@ export default function Purchases() {
   };
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-4 mb-5 pb-5">
       {/* Page Heading */}
       <motion.h2
         className="mb-4 fw-bold text-center"
@@ -118,12 +147,11 @@ export default function Purchases() {
         📦 Purchase Management
       </motion.h2>
 
-      {/* Total Purchase Summary Box */}
+      {/* Total Purchase Summary */}
       <motion.div
         className="p-3 mb-4 rounded-4 shadow-sm text-center"
         style={{
-          // background: "rgba(255, 255, 255, 0.15)",
-                          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
+          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
           backdropFilter: "blur(12px)",
           border: "1px solid rgba(255, 255, 255, 0.2)",
         }}
@@ -131,7 +159,9 @@ export default function Purchases() {
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <strong className="fs-5 text-white pt-2 pb-2 m-2">💰 Total Purchased: </strong>
+        <strong className="fs-5 text-white pt-2 pb-2 m-2">
+          💰 Total Purchased:{" "}
+        </strong>
         <span className="fs-4 fw-bold text-white ms-2 bg-success bg-opacity-10 p-2 rounded-3">
           ₹{getTotalPurchaseAmount().toFixed(2)}
         </span>
@@ -150,26 +180,21 @@ export default function Purchases() {
           setItem={setItem}
           quantity={quantity}
           setQuantity={setQuantity}
-          cost={cost}
-          setCost={setCost}
+          buyingPrice={buyingPrice}
+          setBuyingPrice={setBuyingPrice}
+          sellingPrice={sellingPrice}
+          setSellingPrice={setSellingPrice}
           handleAddToCart={handleAddToCart}
         />
       </motion.div>
 
-      {/* Cart Table */}
-      {purchaseCart.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-        >
-          <PurchaseCart
-            purchaseCart={purchaseCart}
-            handleCompletePurchase={handleCompletePurchase}
-            handleRemoveItem={handleRemoveItem}
-          />
-        </motion.div>
-      )}
+      {/* Purchase Cart */}
+      <PurchaseCart
+        purchaseCart={purchaseCart}
+        handleCompletePurchase={handleCompletePurchase}
+        handleRemoveItem={handleRemoveItem}
+        clearCart={() => setPurchaseCart([])}
+      />
 
       {/* Section Heading */}
       <motion.h3

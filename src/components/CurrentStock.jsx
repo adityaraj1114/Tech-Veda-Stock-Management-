@@ -31,14 +31,19 @@ const CurrentStock = ({ search = "" }) => {
         .reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
 
       const inStock = purchasedQty - soldQty;
-      const unitPrice = Number(inv.unitPrice) || 0;
-      const totalValue = unitPrice * inStock;
+      const buyingPrice = Number(inv.buyingPrice) || 0;
+      const sellingPrice = Number(inv.sellingPrice) || 0;
+
+      // ✅ Total value based on buying price
+      const totalValue = buyingPrice * inStock;
 
       return {
         ...inv,
         purchased: purchasedQty,
         sold: soldQty,
         inStock,
+        buyingPrice,
+        sellingPrice,
         totalValue,
       };
     });
@@ -62,7 +67,8 @@ const CurrentStock = ({ search = "" }) => {
   const exportCSV = () => {
     const data = filteredInventory.map((inv) => ({
       Item: inv.item,
-      "Unit Price (₹)": inv.unitPrice.toFixed(2),
+      "Buying Price (₹)": inv.buyingPrice.toFixed(2),
+      "Selling Price (₹)": inv.sellingPrice.toFixed(2),
       Purchased: inv.purchased,
       Sold: inv.sold,
       "In Stock": inv.inStock,
@@ -76,7 +82,8 @@ const CurrentStock = ({ search = "" }) => {
   const exportExcel = () => {
     const data = filteredInventory.map((inv) => ({
       Item: inv.item,
-      "Unit Price (₹)": inv.unitPrice.toFixed(2),
+      "Buying Price (₹)": inv.buyingPrice.toFixed(2),
+      "Selling Price (₹)": inv.sellingPrice.toFixed(2),
       Purchased: inv.purchased,
       Sold: inv.sold,
       "In Stock": inv.inStock,
@@ -161,7 +168,8 @@ const CurrentStock = ({ search = "" }) => {
               </th>
               <th>No.</th>
               <th>Item</th>
-              <th>Unit Price (₹)</th>
+              <th>Buying Price (₹)</th>
+              <th>Selling Price (₹)</th>
               <th>Purchased</th>
               <th>Sold</th>
               <th>In Stock</th>
@@ -181,7 +189,8 @@ const CurrentStock = ({ search = "" }) => {
                 </td>
                 <td>{(currentPage - 1) * pageSize + i + 1}</td>
                 <td>{inv.item || "N/A"}</td>
-                <td>₹{(inv.unitPrice || 0).toFixed(2)}</td>
+                <td>₹{(inv.buyingPrice || 0).toFixed(2)}</td>
+                <td>₹{(inv.sellingPrice || 0).toFixed(2)}</td>
                 <td>{inv.purchased || 0}</td>
                 <td>{inv.sold || 0}</td>
                 <td
@@ -205,7 +214,7 @@ const CurrentStock = ({ search = "" }) => {
 
             {/* Summary Row */}
             <tr className="table-secondary fw-bold">
-              <td colSpan="7" className="text-end">
+              <td colSpan="8" className="text-end">
                 Grand Total Value:
               </td>
               <td colSpan="2">₹{grandTotalValue.toFixed(2)}</td>
@@ -214,39 +223,39 @@ const CurrentStock = ({ search = "" }) => {
         </table>
       </div>
       <div className="d-flex justify-content-between align-items-center mb-2 mt-2">
-          <button
-            className="btn btn-sm btn-outline-secondary ms-2 mt-2"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
-          >
-            ⬅️ Prev
-          </button>
-          <span className="mt-2"> Page {currentPage} of {totalPages} </span>
-          <button
-            className="btn btn-sm btn-outline-secondary ms-1"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
-          >
-            ➡️ Next
-          </button>
-        </div>
+        <button
+          className="btn btn-sm btn-outline-secondary ms-2 mt-2"
+          disabled={currentPage === 1}
+          onClick={() => setCurrentPage((p) => p - 1)}
+        >
+          ⬅️ Prev
+        </button>
+        <span className="mt-2"> Page {currentPage} of {totalPages} </span>
+        <button
+          className="btn btn-sm btn-outline-secondary ms-1"
+          disabled={currentPage === totalPages}
+          onClick={() => setCurrentPage((p) => p + 1)}
+        >
+          ➡️ Next
+        </button>
+      </div>
 
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-outline-danger"
-            onClick={handleDeleteSelected}
-            disabled={!selectedItems.length}
-          >
-            🗑 Del Selected
-          </button>
-          <button
-            className="btn btn-danger"
-            onClick={handleDeleteAll}
-            disabled={!filteredInventory.length}
-          >
-            🧹 Delete All
-          </button>
-        </div>
+      <div className="d-flex gap-2">
+        <button
+          className="btn btn-outline-danger"
+          onClick={handleDeleteSelected}
+          disabled={!selectedItems.length}
+        >
+          🗑 Del Selected
+        </button>
+        <button
+          className="btn btn-danger"
+          onClick={handleDeleteAll}
+          disabled={!filteredInventory.length}
+        >
+          🧹 Delete All
+        </button>
+      </div>
     </div>
   );
 };

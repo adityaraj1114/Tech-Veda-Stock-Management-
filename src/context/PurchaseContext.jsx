@@ -16,31 +16,68 @@ export const PurchaseProvider = ({ children }) => {
 
   const [purchaseCart, setPurchaseCart] = useState([]);
 
+  // ✅ Maintain last entered selling price per item
+  const [lastSellingPrices, setLastSellingPrices] = useState(() => {
+    try {
+      const raw = localStorage.getItem("lastSellingPrices");
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
+
+  // ✅ Supplier ko memory me rakhne ke liye
+  const [currentSupplier, setCurrentSupplier] = useState("");
+
+  const normalizeKey = (s) => (s || "").toString().trim().toLowerCase();
+
   // -------------------- Purchase Cart --------------------
   const addToPurchaseCart = (itemData) => {
-    const quantity = parseFloat(itemData.quantity);
-    const cost = parseFloat(itemData.cost);
+    const quantity = parseFloat(itemData.quantity) || 0;
+    const buyingPrice = parseFloat(itemData.buyingPrice) || 0;
+    const key = normalizeKey(itemData.item);
+
+    // Selling price: optional, fallback to last saved
+    const sellingPrice =
+      itemData.sellingPrice !== undefined && itemData.sellingPrice !== null
+        ? parseFloat(itemData.sellingPrice)
+        : lastSellingPrices[key] || 0;
+
+    // Save/update selling price for this item
+    if (sellingPrice) {
+      setLastSellingPrices((prev) => ({
+        ...prev,
+        [key]: sellingPrice,
+      }));
+    }
 
     setPurchaseCart((prev) => [
       ...prev,
       {
         id: Date.now() + Math.random(),
-        item: itemData.item.trim(),
+        item: (itemData.item || "").trim(),
         quantity,
-        cost,
-        totalCost: quantity * cost,
+        buyingPrice,
+        sellingPrice,
+        totalCost: quantity * buyingPrice,
       },
     ]);
+
+    // ✅ Update supplier
+    if (itemData.supplier) setCurrentSupplier(itemData.supplier.trim());
   };
 
   const completePurchase = (supplier) => {
     if (purchaseCart.length === 0) return;
 
-    const totalCost = purchaseCart.reduce((sum, i) => sum + i.totalCost, 0);
+    const totalCost = purchaseCart.reduce(
+      (sum, i) => sum + (parseFloat(i.totalCost) || 0),
+      0
+    );
 
     const newPurchase = {
       id: Date.now() + Math.random(),
-      supplier: supplier.trim(),
+      supplier: (supplier || currentSupplier || "Unknown Supplier").trim(),
       items: purchaseCart,
       totalCost,
       date: new Date().toLocaleString(),
@@ -52,28 +89,44 @@ export const PurchaseProvider = ({ children }) => {
 
   const clearPurchaseCart = () => setPurchaseCart([]);
 
-  const addPurchase = ({ supplier, item, quantity, cost }) => {
-    const qty = parseFloat(quantity);
-    const price = parseFloat(cost);
+  const addPurchase = ({ supplier, item, quantity, buyingPrice, sellingPrice }) => {
+    const qty = parseFloat(quantity) || 0;
+    const cost = parseFloat(buyingPrice) || 0;
+    const key = normalizeKey(item);
+
+    const sellPrice =
+      sellingPrice !== undefined && sellingPrice !== null
+        ? parseFloat(sellingPrice)
+        : lastSellingPrices[key] || 0;
+
+    if (sellPrice) {
+      setLastSellingPrices((prev) => ({
+        ...prev,
+        [key]: sellPrice,
+      }));
+    }
 
     setPurchases((prev) => [
       ...prev,
       {
         id: Date.now() + Math.random(),
-        supplier: supplier.trim(),
+        supplier: (supplier || currentSupplier || "Unknown Supplier").trim(),
         items: [
           {
             id: Date.now() + Math.random(),
-            item: item.trim(),
+            item: (item || "").trim(),
             quantity: qty,
-            cost: price,
-            totalCost: qty * price,
+            buyingPrice: cost,
+            sellingPrice: sellPrice,
+            totalCost: qty * cost,
           },
         ],
-        totalCost: qty * price,
+        totalCost: qty * cost,
         date: new Date().toLocaleString(),
       },
     ]);
+
+    if (supplier) setCurrentSupplier(supplier.trim());
   };
 
   const deletePurchase = (id) => {
@@ -97,10 +150,14 @@ export const PurchaseProvider = ({ children }) => {
   const getTotalPurchaseAmount = () =>
     purchases.reduce((sum, p) => sum + (parseFloat(p.totalCost) || 0), 0);
 
-  // ✅ Persist to localStorage
+  // -------------------- Persist to localStorage --------------------
   useEffect(() => {
     localStorage.setItem("purchases", JSON.stringify(purchases));
   }, [purchases]);
+
+  useEffect(() => {
+    localStorage.setItem("lastSellingPrices", JSON.stringify(lastSellingPrices));
+  }, [lastSellingPrices]);
 
   return (
     <PurchaseContext.Provider
@@ -114,6 +171,12 @@ export const PurchaseProvider = ({ children }) => {
         deletePurchase,
         getPurchasedItems,
         getTotalPurchaseAmount,
+        sellingPriceHistory: lastSellingPrices, // ✅ exported alias
+        lastSellingPrices, // direct access
+        setLastSellingPrices,
+        setPurchaseCart,
+        currentSupplier,
+        setCurrentSupplier,
       }}
     >
       {children}

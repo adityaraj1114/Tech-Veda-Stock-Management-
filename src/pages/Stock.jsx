@@ -8,7 +8,7 @@ export default function Stock() {
   const [search, setSearch] = useState("");
 
   return (
-    <div className="container mt-4">
+    <div className="container mt-4 pb-5">
       {/* Page Heading */}
       <motion.h2
         className="mb-4 fw-bold text-center"

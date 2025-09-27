@@ -6,6 +6,7 @@ export default function PurchaseCart({
   purchaseCart = [],
   handleCompletePurchase,
   handleRemoveItem,
+  clearCart, // ✅ clear cart instantly after purchase
 }) {
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -17,7 +18,14 @@ export default function PurchaseCart({
 
   const completePurchase = () => {
     if (!purchaseCart.length) return;
+
+    // ✅ Save purchase to context
     handleCompletePurchase();
+
+    // ✅ Clear cart instantly (UI update)
+    if (clearCart) clearCart();
+
+    // ✅ Success message
     setShowSuccess(true);
     setTimeout(() => setShowSuccess(false), 2500);
   };
@@ -36,20 +44,26 @@ export default function PurchaseCart({
 
   return (
     <motion.div
-      className="card p-3 mb-4 shadow-sm"
+      className="card p-3 mb-4 shadow-lg border-0"
       initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, ease: "easeOut" }}
     >
-      <h5 className="fw-bold mb-3">🛒 Current Purchase Cart</h5>
+      <h5 className="fw-bold mb-3 text-primary">🛒 Current Purchase Cart</h5>
 
       <div style={{ overflowX: "auto" }}>
-        <table className="table table-hover table-bordered align-middle text-center">
-          <thead className="table-light">
+        <table className="table table-striped table-hover align-middle text-center mb-0">
+          <thead
+            className="text-white"
+            style={{
+              background: "linear-gradient(90deg, #667eea 0%, #764ba2 100%)",
+            }}
+          >
             <tr>
               <th>Item</th>
               <th>Qty</th>
-              <th>Cost (₹)</th>
+              <th>Buying Price (₹)</th>
+              <th>Selling Price (₹)</th>
               <th>Total (₹)</th>
               <th>Remove</th>
             </tr>
@@ -66,13 +80,18 @@ export default function PurchaseCart({
                 >
                   <td>{p.item}</td>
                   <td>{p.quantity}</td>
-                  <td>₹{parseFloat(p.cost).toFixed(2)}</td>
+                  <td>₹{parseFloat(p.buyingPrice).toFixed(2)}</td>
+                  <td>
+                    {p.sellingPrice
+                      ? `₹${parseFloat(p.sellingPrice).toFixed(2)}`
+                      : "—"}
+                  </td>
                   <td className="fw-bold text-success">
                     ₹{parseFloat(p.totalCost).toFixed(2)}
                   </td>
                   <td>
                     <motion.button
-                      className="btn btn-sm btn-outline-danger"
+                      className="btn btn-sm btn-outline-danger rounded-circle"
                       whileHover={{ scale: 1.1 }}
                       whileTap={{ scale: 0.9 }}
                       onClick={() => handleRemoveItem(p.id)}
@@ -89,13 +108,14 @@ export default function PurchaseCart({
 
       {/* Grand Total */}
       <div className="text-end fw-bold fs-5 mt-3 mb-3">
-        Grand Total: <span className="text-success">₹{grandTotal.toFixed(2)}</span>
+        Grand Total:{" "}
+        <span className="text-success">₹{grandTotal.toFixed(2)}</span>
       </div>
 
       {/* Complete Purchase */}
       <div className="d-flex justify-content-end position-relative">
         <motion.button
-          className="btn btn-success fw-bold rounded-3 shadow"
+          className="btn btn-success fw-bold rounded-pill shadow px-4"
           onClick={completePurchase}
           whileHover={{ scale: 1.05 }}
           whileTap={{ scale: 0.95 }}

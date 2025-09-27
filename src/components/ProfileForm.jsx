@@ -141,7 +141,7 @@ export default function ProfileForm({
       </div>
 
       {/* Tax IDs */}
-      <div className="col-md-6">
+      <div className="col-md-4">
         <label className="form-label">GSTIN</label>
         <input
           type="text"
@@ -153,7 +153,7 @@ export default function ProfileForm({
           disabled={disabled}
         />
       </div>
-      <div className="col-md-6">
+      <div className="col-md-4">
         <label className="form-label">PAN</label>
         <input
           type="text"
@@ -163,6 +163,23 @@ export default function ProfileForm({
           value={form.pan || ""}
           onChange={onChange}
           pattern="[A-Z]{5}[0-9]{4}[A-Z]{1}"
+          disabled={disabled}
+        />
+      </div>
+
+      {/* New: GST Percent */}
+      <div className="col-md-4">
+        <label className="form-label">GST (%)</label>
+        <input
+          type="number"
+          name="gstPercent"
+          className="form-control"
+          placeholder="0"
+          value={form.gstPercent ?? 0}
+          onChange={onChange}
+          min="0"
+          max="100"
+          step="0.01"
           disabled={disabled}
         />
       </div>

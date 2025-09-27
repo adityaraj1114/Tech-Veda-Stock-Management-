@@ -90,7 +90,7 @@ export default function Signup() {
 
   return (
     <div
-      className="min-vh-100 d-flex justify-content-center align-items-center pt-4"
+      className="min-vh-100 d-flex justify-content-center align-items-center pt-4 pb-5"
       style={{
         background: "linear-gradient(135deg, #2d87aeff, #197998ff, #28424dff)",
         position: "relative",

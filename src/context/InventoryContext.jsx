@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 export const InventoryContext = createContext();
 
 export const InventoryProvider = ({ children }) => {
+  // -------------------- States --------------------
   const [purchases, setPurchases] = useState(() => {
     try {
       const raw = localStorage.getItem("purchases");
@@ -31,7 +32,7 @@ export const InventoryProvider = ({ children }) => {
     }
   });
 
-  // -------------------- Add Sale (New) --------------------
+  // -------------------- Add Sale --------------------
   const addSale = (customer, contactPhone, items, paidAmount = 0) => {
     const totalAmount = items.reduce((sum, it) => sum + it.total, 0);
 
@@ -40,7 +41,7 @@ export const InventoryProvider = ({ children }) => {
       date: new Date().toISOString().slice(0, 10),
       customer,
       contactPhone,
-      items, // [{ product, quantity, unitPrice, total }]
+      items, // [{ product, quantity, sellingPrice, total }]
       totalAmount,
       paidAmount,
     };
@@ -61,8 +62,7 @@ export const InventoryProvider = ({ children }) => {
                 ...c,
                 paidAmount: (c.paidAmount || 0) + paidAmount,
                 pendingAmount:
-                  (c.pendingAmount || 0) +
-                  (totalAmount - paidAmount),
+                  (c.pendingAmount || 0) + (totalAmount - paidAmount),
               }
             : c
         );
@@ -92,10 +92,7 @@ export const InventoryProvider = ({ children }) => {
           ? {
               ...c,
               paidAmount: (c.paidAmount || 0) + amount,
-              pendingAmount: Math.max(
-                (c.pendingAmount || 0) - amount,
-                0
-              ),
+              pendingAmount: Math.max((c.pendingAmount || 0) - amount, 0),
             }
           : c
       )
@@ -104,7 +101,9 @@ export const InventoryProvider = ({ children }) => {
 
   // -------------------- Delete Stock Item --------------------
   const deleteStockItem = (itemName) => {
-    if (window.confirm(`Delete all purchase & sale records for "${itemName}"?`)) {
+    if (
+      window.confirm(`Delete all purchase & sale records for "${itemName}"?`)
+    ) {
       setPurchases((prev) =>
         prev
           .map((p) => ({
@@ -137,42 +136,63 @@ export const InventoryProvider = ({ children }) => {
 
   // -------------------- Get Inventory --------------------
   const getInventory = () => {
-    const stockMap = {};
+  const stockMap = {};
 
-    purchases.forEach((p) => {
-      (p.items || []).forEach((it) => {
-        if (!stockMap[it.item]) {
-          stockMap[it.item] = { purchased: 0, sold: 0, costSum: 0 };
-        }
-        stockMap[it.item].purchased += it.quantity;
-        stockMap[it.item].costSum += it.quantity * it.cost;
-      });
+  // Purchases → Buying Price + Selling Price
+  purchases.forEach((p) => {
+    (p.items || []).forEach((it) => {
+      if (!stockMap[it.item]) {
+        stockMap[it.item] = {
+          purchased: 0,
+          sold: 0,
+          costSum: 0, // buying price × qty
+          sellingPrice: 0, // last entered selling price
+        };
+      }
+      const qty = Number(it.quantity) || 0;
+      const buyingPrice = Number(it.buyingPrice) || 0;
+      const sellingPrice = Number(it.sellingPrice) || 0;
+
+      stockMap[it.item].purchased += qty;
+      stockMap[it.item].costSum += buyingPrice * qty;
+      // always update selling price with the latest one
+      if (sellingPrice > 0) stockMap[it.item].sellingPrice = sellingPrice;
     });
+  });
 
-    sales.forEach((s) => {
-      (s.items || []).forEach((it) => {
-        if (!stockMap[it.product]) {
-          stockMap[it.product] = { purchased: 0, sold: 0, costSum: 0 };
-        }
-        stockMap[it.product].sold += it.quantity;
-      });
+  // Sales → update sold quantity
+  sales.forEach((s) => {
+    (s.items || []).forEach((it) => {
+      if (!stockMap[it.product]) {
+        stockMap[it.product] = {
+          purchased: 0,
+          sold: 0,
+          costSum: 0,
+          sellingPrice: 0,
+        };
+      }
+      stockMap[it.product].sold += Number(it.quantity) || 0;
     });
+  });
 
-    return Object.entries(stockMap).map(([item, data]) => {
-      const unitPrice = data.purchased > 0 ? data.costSum / data.purchased : 0;
-      const inStock = data.purchased - data.sold;
-      const totalValue = unitPrice * inStock;
+  // Map to inventory array
+  return Object.entries(stockMap).map(([item, data]) => {
+    const buyingPrice = data.purchased > 0 ? data.costSum / data.purchased : 0;
+    const inStock = data.purchased - data.sold;
+    const totalValue = buyingPrice * inStock; // based on buying price
 
-      return {
-        item,
-        purchased: data.purchased,
-        sold: data.sold,
-        unitPrice,
-        inStock,
-        totalValue,
-      };
-    });
-  };
+    return {
+      item,
+      purchased: data.purchased,
+      sold: data.sold,
+      buyingPrice,
+      sellingPrice: data.sellingPrice, // ✅ show last set selling price
+      inStock,
+      totalValue,
+    };
+  });
+};
+
 
   // -------------------- Profit/Loss --------------------
   const getProfitLoss = () => {
@@ -180,7 +200,10 @@ export const InventoryProvider = ({ children }) => {
       (sum, p) => sum + (p.totalCost || 0),
       0
     );
-    const totalSales = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
+    const totalSales = sales.reduce(
+      (sum, s) => sum + (s.totalAmount || 0),
+      0
+    );
 
     return { totalPurchase, totalSales, profit: totalSales - totalPurchase };
   };
@@ -236,8 +259,8 @@ export const InventoryProvider = ({ children }) => {
         getTransactions,
         deleteStockItem,
         resetData,
-        addSale, // ✅ new
-        recordPayment, // ✅ new
+        addSale,
+        recordPayment,
       }}
     >
       {children}

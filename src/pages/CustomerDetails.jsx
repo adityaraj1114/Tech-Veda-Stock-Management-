@@ -1,3 +1,4 @@
+// src/pages/CustomerDetails.jsx
 import React, { useState, useMemo } from "react";
 import { useParams } from "react-router-dom";
 import { useCustomer } from "../context/CustomerContext";
@@ -7,6 +8,7 @@ import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
+import { motion } from "framer-motion";
 
 export default function CustomerDetails() {
   const { id } = useParams();
@@ -21,6 +23,7 @@ export default function CustomerDetails() {
   const cust = customers.find((c) => String(c.id) === String(id));
   if (!cust) return <p className="text-danger">Customer not found 🚫</p>;
 
+  // ✅ Group sales by transaction (customer + date) with proper discount & GST
   const customerSales = useMemo(() => {
     const grouped = [];
     const map = {};
@@ -28,12 +31,17 @@ export default function CustomerDetails() {
     sales
       .filter((s) => s.customer === cust.name)
       .forEach((s) => {
-        const txKey = s.date + "_" + cust.id;
+        const txKey = `${s.date}_${cust.id}`;
         if (!map[txKey]) {
           map[txKey] = {
             id: txKey,
             date: s.date,
+            customer: cust.name,
             items: [],
+            subtotal: 0,
+            discount: 0,
+            gstRate: s.gstRate || 0,
+            gstAmount: 0,
             totalAmount: 0,
             paid: 0,
             pending: 0,
@@ -42,33 +50,51 @@ export default function CustomerDetails() {
           grouped.push(map[txKey]);
         }
 
+        const qty = Number(s.quantity || 0);
+        const unitPrice = Number(s.sellingPrice || s.unitPrice || 0);
+        const itemDiscount = Number(s.discount || 0); // ✅ use as absolute value
+        const gstPct = Number(s.gstRate || 0);
+
+        const itemSubtotal = qty * unitPrice;
+        const afterDiscount = itemSubtotal - itemDiscount;
+        const itemGst = (gstPct / 100) * afterDiscount;
+        const itemTotal = afterDiscount + itemGst;
+
         map[txKey].items.push({
           product: s.product,
-          quantity: s.quantity,
-          unitPrice: s.unitPrice,
-          total: s.total,
+          quantity: qty,
+          unitPrice,
+          discount: itemDiscount,
+          gst: itemGst,
+          total: itemTotal,
         });
 
-        map[txKey].totalAmount += s.total;
+        map[txKey].subtotal += itemSubtotal;
+        map[txKey].discount += itemDiscount;
+        map[txKey].gstAmount += itemGst;
+        map[txKey].totalAmount += itemTotal;
         map[txKey].paid += s.paid || 0;
-        map[txKey].pending += s.total - (s.paid || 0);
+        map[txKey].pending += itemTotal - (s.paid || 0);
       });
 
     return grouped;
   }, [sales, cust]);
 
+  // ✅ Filter by date
   const filteredSales = useMemo(() => {
     return customerSales.filter((tx) =>
-      searchDate ? tx.date === searchDate : true
+      searchDate ? tx.date.startsWith(searchDate) : true
     );
   }, [customerSales, searchDate]);
 
+  // ✅ Pagination
   const totalPages = Math.ceil(filteredSales.length / pageSize);
   const paginatedSales = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filteredSales.slice(start, start + pageSize);
   }, [filteredSales, currentPage]);
 
+  // ✅ Totals
   const totalPurchased = customerSales.reduce(
     (sum, s) => sum + s.totalAmount,
     0
@@ -84,6 +110,7 @@ export default function CustomerDetails() {
     gstin: cust.gstin || "— Not Provided",
   };
 
+  // ✅ Notify on WhatsApp
   const notifyOnWhatsApp = () => {
     if (!cust.contactPhone) {
       alert("Customer phone number not available for WhatsApp.");
@@ -98,10 +125,13 @@ Paid: ₹${totalPaid.toFixed(2)}
 Pending: ₹${totalPending.toFixed(2)}
 
 Thank you!`;
-    const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank");
+    window.open(
+      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
+      "_blank"
+    );
   };
 
+  // ✅ Record Payment
   const handleRecordPayment = () => {
     const amt = parseFloat(prompt("Enter payment amount (₹):"));
     if (!isNaN(amt) && amt > 0) {
@@ -110,7 +140,7 @@ Thank you!`;
       const updatedSales = sales.map((s) => {
         if (s.customer !== cust.name) return s;
 
-        const pending = s.total - (s.paid || 0);
+        const pending = (s.totalAmount || s.total) - (s.paid || 0);
         if (pending <= 0) return s;
 
         const payNow = remaining >= pending ? pending : remaining;
@@ -131,90 +161,131 @@ Thank you!`;
     }
   };
 
+  // ✅ Delete Transaction
   const handleDeleteTx = (txKey) => {
     if (!window.confirm("Delete this entire transaction?")) return;
-    const [date] = txKey.split("_");
+    const [date, customerId] = txKey.split("_");
     const updated = sales.filter(
       (s) => !(s.customer === cust.name && s.date === date)
     );
     updateSalePayment(updated);
   };
 
+  // ✅ Share Bill on WhatsApp
   const shareBillOnWhatsApp = (tx) => {
-      const text = `🧾 Bill for ${tx.customer}
-  Date: ${tx.date}
-  
-  ${tx.items
-        .map(
-          (it, i) =>
-            `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice} = ₹${it.total}`
-        )
-        .join("\n")}
-  
-  Total: ₹${tx.total}
-  Paid: ₹${tx.paid}
-  Pending: ₹${tx.pending}
-  
-  📍 Address: ${tx.customerInfo.billingAddress || "N/A"}
-  📦 Shipping: ${tx.customerInfo.shippingAddress || "N/A"}
-  📞 Phone: ${tx.customerInfo.contactPhone || "N/A"}
-  GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
-  
-      window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
-    };
-  
-    const downloadBillPDF = (tx) => {
-      const el = document.getElementById(`bill_${tx.id}`);
-      if (!el) return;
-      const opt = {
-        margin: 0.5,
-        filename: `Bill_${tx.customer}_${tx.id}.pdf`,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
-      };
-      html2pdf().set(opt).from(el).save().catch((err) => console.error(err));
-    };
+    const text = `🧾 Bill for ${tx.customer}
+Date: ${tx.date}
 
+${tx.items
+  .map(
+    (it, i) =>
+      `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice} 
+Discount: ₹${it.discount.toFixed(2)} GST: ₹${it.gst.toFixed(2)} 
+= ₹${it.total.toFixed(2)}`
+  )
+  .join("\n")}
+
+Subtotal: ₹${tx.subtotal.toFixed(2)}
+Total Discount: ₹${tx.discount.toFixed(2)}
+GST: ₹${tx.gstAmount.toFixed(2)}
+Total: ₹${tx.totalAmount.toFixed(2)}
+Paid: ₹${tx.paid.toFixed(2)}
+Pending: ₹${tx.pending.toFixed(2)}
+
+📍 Address: ${tx.customerInfo.billingAddress || "N/A"}
+📦 Shipping: ${tx.customerInfo.shippingAddress || "N/A"}
+📞 Phone: ${tx.customerInfo.contactPhone || "N/A"}
+GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
+
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+  };
+
+  // ✅ Download Bill PDF
+  const downloadBillPDF = (tx) => {
+    const el = document.getElementById(`bill_${tx.id}`);
+    if (!el) return;
+    const opt = {
+      margin: 0.5,
+      filename: `Bill_${tx.customer}_${tx.id}.pdf`,
+      image: { type: "jpeg", quality: 0.98 },
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
+    };
+    html2pdf()
+      .set(opt)
+      .from(el)
+      .save()
+      .catch((err) => console.error(err));
+  };
+
+  // ✅ Export CSV & Excel
   const exportCSV = () => {
     const data = filteredSales.map((tx) => ({
       Date: tx.date,
+      Subtotal: tx.subtotal.toFixed(2),
+      Discount: tx.discount.toFixed(2),
+      GST: tx.gstAmount.toFixed(2),
       Total: tx.totalAmount.toFixed(2),
       Paid: tx.paid.toFixed(2),
-      Pending: (tx.totalAmount - tx.paid).toFixed(2),
+      Pending: tx.pending.toFixed(2),
     }));
-    const csv = Papa.unparse(data);
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    saveAs(blob, `customer_${cust.name}_transactions.csv`);
+    saveAs(
+      new Blob([Papa.unparse(data)], { type: "text/csv;charset=utf-8;" }),
+      `customer_${cust.name}_transactions.csv`
+    );
   };
 
   const exportExcel = () => {
     const data = filteredSales.map((tx) => ({
       Date: tx.date,
+      Subtotal: tx.subtotal.toFixed(2),
+      Discount: tx.discount.toFixed(2),
+      GST: tx.gstAmount.toFixed(2),
       Total: tx.totalAmount.toFixed(2),
       Paid: tx.paid.toFixed(2),
-      Pending: (tx.totalAmount - tx.paid).toFixed(2),
+      Pending: tx.pending.toFixed(2),
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
-    const blob = new Blob([excelBuffer], {
-      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-    });
-    saveAs(blob, `customer_${cust.name}_transactions.xlsx`);
+    saveAs(
+      new Blob([XLSX.write(workbook, { bookType: "xlsx", type: "array" })], {
+        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      }),
+      `customer_${cust.name}_transactions.xlsx`
+    );
   };
 
   return (
-    <div className="container mt-1 p-0">
-      <div className="card shadow p-2">
-        <h2 className="mb-3">📋 Customer Details</h2>
+    <div className="container p-0 mb-5">
+      <motion.div
+        className="card shadow p-4 rounded-4"
+        style={{
+          background: "linear-gradient(135deg, #091257ff 0%, #2505c2ff 100%)",
+          backdropFilter: "blur(12px)",
+          border: "1px solid rgba(255, 255, 255, 0.2)",
+        }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.3 }}
+      >
+        <h2 className="mb-3 text-center text-primary">📋 Customer Details</h2>
 
-        <div className="card mb-4 p-3 bg-light border">
-          <h4 className="text-primary">{displayInfo.name}</h4>
+        {/* Customer Info */}
+        <motion.div
+          className="card mb-4 p-3 bg-light border rounded-3 shadow-sm"
+          style={{
+            background: "linear-gradient(135deg, #6ae4faff 0%, #e1ff75ff 100%)",
+            backdropFilter: "blur(12px)",
+            border: "1px solid rgba(255, 255, 255, 0.2)",
+          }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.3 }}
+        >
+          <h4 className="text-dark pb-1 text-center">
+            <b>{displayInfo.name}</b>
+          </h4>
           <p>
             🏠 <strong>Billing Address:</strong> {displayInfo.billingAddress}
           </p>
@@ -222,52 +293,107 @@ Thank you!`;
             📦 <strong>Shipping Address:</strong> {displayInfo.shippingAddress}
           </p>
           <p>
-            📞 <strong>Phone:</strong> {displayInfo.contactPhone}
+            📞 <strong>Phone:</strong> <b>{displayInfo.contactPhone}</b>
           </p>
           <p>
             🧾 <strong>GSTIN:</strong> {displayInfo.gstin}
           </p>
-          <button
-            className="btn btn-sm btn-success mt-2"
-            onClick={notifyOnWhatsApp}
-          >
-            📲 Notify on WhatsApp
-          </button>
-        </div>
+        </motion.div>
 
-        <div className="row mb-4">
+        {/* Summary */}
+        <motion.div
+          className="row mb-4"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.2 }}
+        >
           <div className="col-md-6">
-            <div className="border p-3 rounded bg-white shadow-sm">
-              <p>
-                <strong>Total Purchased:</strong> ₹{totalPurchased.toFixed(2)}
-              </p>
-              <p>
-                <strong>Paid:</strong> ₹{totalPaid.toFixed(2)}
-              </p>
-              <p>
-                <strong>Pending:</strong>{" "}
-                <span className="text-danger fw-bold">
-                  ₹{totalPending.toFixed(2)}
-                </span>
-              </p>
-            </div>
+            <motion.div
+              className="border p-3 rounded bg-white shadow-sm"
+              style={{
+                background:
+                  "linear-gradient(135deg, #6ae4faff 0%, #e1ff75ff 100%)",
+                backdropFilter: "blur(12px)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+              }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+            >
+              {/** Calculate totals correctly */}
+              {(() => {
+                let totalPurchased = 0;
+                let totalPaid = 0;
+
+                filteredSales.forEach((b) => {
+                  const discountAmount = (b.subtotal * (b.discount || 0)) / 100;
+                  const total = b.subtotal - discountAmount + b.gstAmount;
+                  totalPurchased += total;
+                  totalPaid += b.paid || 0;
+                });
+
+                const totalPending = totalPurchased - totalPaid;
+
+                return (
+                  <>
+                    <p className="fs-5 text-dark pt-2 pb-2 m-2">
+                      <strong>Total Purchased:</strong> ₹
+                      {totalPurchased.toFixed(2)}
+                    </p>
+                    <p className="fs-5 text-green pt-2 pb-2 m-2">
+                      <strong>Paid:</strong> ₹{totalPaid.toFixed(2)}
+                    </p>
+                    <p className="fs-5 text-dark pt-2 pb-2 m-2">
+                      <strong>Pending:</strong>{" "}
+                      <span className="text-danger fw-bold">
+                        ₹{totalPending.toFixed(2)}
+                      </span>
+                    </p>
+                  </>
+                );
+              })()}
+            </motion.div>
+
+            {totalPending > 0 && (
+              <div className="mt-3">
+                <button
+                  className="btn btn-success w-100"
+                  onClick={handleRecordPayment}
+                >
+                  💵 Record Payment
+                </button>
+              </div>
+            )}
+
+            <button
+              className="btn btn-success mt-3 w-100"
+              onClick={notifyOnWhatsApp}
+            >
+              📲 Notify on WhatsApp
+            </button>
           </div>
+        </motion.div>
+
+        {/* Bill Preview Modal */}
+
+        <div className="p-0">
+          {showBillFor && (
+            <BillPreview
+              shareBillOnWhatsApp={shareBillOnWhatsApp}
+              downloadBillPDF={downloadBillPDF}
+              setShowBillFor={setShowBillFor}
+              showBillFor={showBillFor}
+              transactions={customerSales}
+              tx={customerSales.find((b) => b.id === showBillFor)}
+            />
+          )}
         </div>
 
-        {showBillFor && (
-          <BillPreview
-            shareBillOnWhatsApp={shareBillOnWhatsApp}
-            downloadBillPDF={downloadBillPDF}
-            setShowBillFor={setShowBillFor}
-            showBillFor={showBillFor}
-            transactions={customerSales}
-            tx={customerSales.find((b) => b.id === showBillFor)}
-          />
-        )}
-
-        <h5 className="mt-4">📑 Transactions</h5>
-
-        <div className="row g-2 mb-3">
+        {/* Transactions Table */}
+        <h5 className="mt-4 mb-4 text-white">
+          <b>📑 Transactions</b>
+        </h5>
+        <div className="row g-2 mb-5">
           <div className="col-md-4">
             <input
               type="date"
@@ -300,12 +426,15 @@ Thank you!`;
         {filteredSales.length === 0 ? (
           <p className="text-muted">No transactions found 🚫</p>
         ) : (
-          <div className="table-responsive">
-            <table className="table table-striped table-bordered">
+          <div className="table-responsive pb-5">
+            <table className="table table-striped table-bordered shadow-sm">
               <thead className="table-primary">
                 <tr>
                   <th>#</th>
                   <th>Date</th>
+                  <th>Subtotal (₹)</th>
+                  <th>Discount (₹)</th>
+                  <th>GST (₹)</th>
                   <th>Total (₹)</th>
                   <th>Paid (₹)</th>
                   <th>Pending (₹)</th>
@@ -313,31 +442,42 @@ Thank you!`;
                 </tr>
               </thead>
               <tbody>
-                {paginatedSales.map((bill, i) => (
-                  <tr key={bill.id}>
-                    <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                    <td>{bill.date}</td>
-                    <td>₹{bill.totalAmount.toFixed(2)}</td>
-                    <td className="text-success">₹{bill.paid.toFixed(2)}</td>
-                    <td className="text-danger">
-                      ₹{(bill.totalAmount - bill.paid).toFixed(2)}
-                    </td>
-                    <td className="d-flex gap-2">
-                      <button
-                        className="btn btn-sm btn-outline-info"
-                        onClick={() => setShowBillFor(bill.id)}
-                      >
-                        View
-                      </button>
-                      <button
-                        className="btn btn-sm btn-outline-danger"
-                        onClick={() => handleDeleteTx(bill.id)}
-                      >
-                        Delete
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {paginatedSales.map((bill, i) => {
+                  const discountAmount =
+                    (bill.subtotal * (bill.discount || 0)) / 100;
+                  const totalAmount =
+                    bill.subtotal - discountAmount + bill.gstAmount;
+                  const pendingAmount = totalAmount - bill.paid;
+
+                  return (
+                    <tr key={bill.id}>
+                      <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                      <td>{bill.date}</td>
+                      <td>₹{bill.subtotal.toFixed(2)}</td>
+                      <td>₹{discountAmount.toFixed(2)}</td>
+                      <td>₹{bill.gstAmount.toFixed(2)}</td>
+                      <td>₹{totalAmount.toFixed(2)}</td>
+                      <td className="text-success">₹{bill.paid.toFixed(2)}</td>
+                      <td className="text-danger">
+                        ₹{pendingAmount.toFixed(2)}
+                      </td>
+                      <td className="d-flex gap-2">
+                        <button
+                          className="btn btn-sm btn-outline-info"
+                          onClick={() => setShowBillFor(bill.id)}
+                        >
+                          View
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDeleteTx(bill.id)}
+                        >
+                          Delete
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
               <tfoot className="table-secondary fw-bold">
                 <tr>
@@ -347,7 +487,32 @@ Thank you!`;
                   <td>
                     ₹
                     {filteredSales
-                      .reduce((sum, b) => sum + b.totalAmount, 0)
+                      .reduce((sum, b) => sum + b.subtotal, 0)
+                      .toFixed(2)}
+                  </td>
+                  <td>
+                    ₹
+                    {filteredSales
+                      .reduce(
+                        (sum, b) =>
+                          sum + (b.subtotal * (b.discount || 0)) / 100,
+                        0
+                      )
+                      .toFixed(2)}
+                  </td>
+                  <td>
+                    ₹
+                    {filteredSales
+                      .reduce((sum, b) => sum + b.gstAmount, 0)
+                      .toFixed(2)}
+                  </td>
+                  <td>
+                    ₹
+                    {filteredSales
+                      .reduce((sum, b) => {
+                        const discount = (b.subtotal * (b.discount || 0)) / 100;
+                        return sum + (b.subtotal - discount + b.gstAmount);
+                      }, 0)
                       .toFixed(2)}
                   </td>
                   <td className="text-success">
@@ -359,7 +524,11 @@ Thank you!`;
                   <td className="text-danger">
                     ₹
                     {filteredSales
-                      .reduce((sum, b) => sum + (b.totalAmount - b.paid), 0)
+                      .reduce((sum, b) => {
+                        const discount = (b.subtotal * (b.discount || 0)) / 100;
+                        const total = b.subtotal - discount + b.gstAmount;
+                        return sum + (total - b.paid);
+                      }, 0)
                       .toFixed(2)}
                   </td>
                   <td>—</td>
@@ -367,7 +536,6 @@ Thank you!`;
               </tfoot>
             </table>
 
-            {/* Pagination Controls */}
             {totalPages > 1 && (
               <div className="d-flex justify-content-between align-items-center mt-3">
                 <button
@@ -391,16 +559,7 @@ Thank you!`;
             )}
           </div>
         )}
-
-        {/* Record Payment */}
-        {totalPending > 0 && (
-          <div className="mt-3">
-            <button className="btn btn-success" onClick={handleRecordPayment}>
-              💵 Record Payment
-            </button>
-          </div>
-        )}
-      </div>
+      </motion.div>
     </div>
   );
 }

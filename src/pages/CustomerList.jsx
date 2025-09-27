@@ -132,7 +132,7 @@ export default function CustomerList() {
 
   return (
     <motion.div
-      className="container mt-4"
+      className="container mt-4 pb-5"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
     >
@@ -213,46 +213,52 @@ export default function CustomerList() {
               </tr>
             </thead>
             <tbody>
-              {paginated.map((c, i) => (
-                <motion.tr
-                  key={c.id ?? `${c.name}_${normalizePhone(c.contactPhone)}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                >
-                  <td>{(page - 1) * pageSize + i + 1}</td>
-                  <td>{c.name}</td>
-                  <td>{c.contactPhone || "—"}</td>
-                  <td>₹{parseFloat(c.totalPurchase || 0).toFixed(2)}</td>
-                  <td className="text-success">
-                    ₹{parseFloat(c.paidAmount || 0).toFixed(2)}
-                  </td>
-                  <td className="text-danger">
-                    ₹{parseFloat(c.pendingAmount || 0).toFixed(2)}
-                  </td>
-                  <td className="d-flex gap-2">
-                    <button
-                      className="btn btn-sm btn-info d-flex align-items-center gap-1"
-                      onClick={() => navigate(`/customers/${c.id}`)}
-                    >
-                      <Eye size={14} /> View
-                    </button>
-                    <button
-                      className="btn btn-sm btn-danger d-flex align-items-center gap-1"
-                      onClick={() => {
-                        if (
-                          window.confirm(
-                            `Delete ${c.name || "this customer"}?`
-                          )
-                        ) {
-                          deleteCustomer(c.id);
+              {paginated.map((c, i) => {
+                const customerId =
+                  c.id || `${c.name}_${normalizePhone(c.contactPhone)}`;
+                return (
+                  <motion.tr
+                    key={customerId}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <td>{(page - 1) * pageSize + i + 1}</td>
+                    <td>{c.name}</td>
+                    <td>{c.contactPhone || "—"}</td>
+                    <td>₹{parseFloat(c.totalPurchase || 0).toFixed(2)}</td>
+                    <td className="text-success">
+                      ₹{parseFloat(c.paidAmount || 0).toFixed(2)}
+                    </td>
+                    <td className="text-danger">
+                      ₹{parseFloat(c.pendingAmount || 0).toFixed(2)}
+                    </td>
+                    <td className="d-flex gap-2">
+                      <button
+                        className="btn btn-sm btn-info d-flex align-items-center gap-1"
+                        onClick={() =>
+                          navigate(`/customers/${customerId}`, { state: c })
                         }
-                      }}
-                    >
-                      <Trash2 size={14} /> Delete
-                    </button>
-                  </td>
-                </motion.tr>
-              ))}
+                      >
+                        <Eye size={14} /> View
+                      </button>
+                      <button
+                        className="btn btn-sm btn-danger d-flex align-items-center gap-1"
+                        onClick={() => {
+                          if (
+                            window.confirm(
+                              `Delete ${c.name || "this customer"}?`
+                            )
+                          ) {
+                            deleteCustomer(customerId);
+                          }
+                        }}
+                      >
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    </td>
+                  </motion.tr>
+                );
+              })}
             </tbody>
             <tfoot className="table-light fw-bold">
               <tr>

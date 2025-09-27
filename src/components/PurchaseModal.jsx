@@ -17,7 +17,6 @@ export default function PurchaseModal({ purchase, onClose }) {
         <div
           className="modal-content rounded-4 shadow-lg"
           style={{
-            // background: "linear-gradient(135deg, #6a11cb, #2575fc)",
             background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
             color: "#fff",
           }}
@@ -46,7 +45,7 @@ export default function PurchaseModal({ purchase, onClose }) {
                   <tr>
                     <th>Item</th>
                     <th>Qty</th>
-                    <th>Cost (₹)</th>
+                    <th>Buying Price (₹)</th>
                     <th>Total (₹)</th>
                   </tr>
                 </thead>
@@ -55,8 +54,10 @@ export default function PurchaseModal({ purchase, onClose }) {
                     <tr key={i}>
                       <td>{it.item}</td>
                       <td>{it.quantity}</td>
-                      <td>₹{parseFloat(it.cost).toFixed(2)}</td>
-                      <td className="fw-bold">₹{parseFloat(it.totalCost).toFixed(2)}</td>
+                      <td>₹{parseFloat(it.buyingPrice).toFixed(2)}</td>
+                      <td className="fw-bold">
+                        ₹{parseFloat(it.totalCost).toFixed(2)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

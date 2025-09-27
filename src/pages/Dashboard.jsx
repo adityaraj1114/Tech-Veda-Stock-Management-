@@ -64,7 +64,7 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="container mt-4 mb-5">
+    <div className="container mt-4 mb-5 pb-5">
       {/* Header */}
       <div className="d-flex justify-content-between align-items-center mb-4 p-3 rounded-4 shadow-sm"
         style={{ background: "linear-gradient(135deg, #7F00FF, #00c6ff)", color: "#fff" }}

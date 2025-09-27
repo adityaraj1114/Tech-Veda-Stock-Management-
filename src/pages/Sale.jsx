@@ -5,6 +5,7 @@ import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 import { useCustomer } from "../context/CustomerContext";
 import { useSales } from "../context/SalesContext";
 import { useInventory } from "../context/InventoryContext";
+import { useProfile } from "../context/ProfileContext";
 
 import CartTable from "../components/CartTable";
 import CustomerForm from "../components/CustomerForm";
@@ -22,49 +23,78 @@ export default function Sales() {
   } = useCustomer();
   const { addSale, setTotalSales } = useSales();
   const { getInventory } = useInventory();
+  const { profile } = useProfile();
 
+  // payment / cart / product states
   const [paidAmount, setPaidAmount] = useState("");
   const [cart, setCart] = useState([]);
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
+  const [discount, setDiscount] = useState(""); // % per-item (optional)
+  const [gst, setGst] = useState(""); // % per-item (optional; fallback to profile.gstPercent)
 
+  // inventory -> productOptions for react-select
   const inventory = getInventory();
   const productOptions = inventory.map((p) => ({
     value: p.item,
     label: p.item,
-    price: p.price || 0,
+    // prefer explicit selling price in inventory, fallback to price/unit fields
+    price: p.sellingPrice ?? p.price ?? p.unitPrice ?? p.buyingPrice ?? 0,
   }));
 
+  // Add product to cart (computes discount + gst + final total per row)
   const handleAddToCart = (e) => {
     if (e) e.preventDefault();
-    if (!product || !quantity || !price) return;
+    if (!product || !quantity || price === "" || price === null) return;
 
-    const qty = parseInt(quantity, 10);
-    const unitPrice = parseFloat(price);
+    const qty = Number(quantity) || 0;
+    const selling = Number(price) || 0;
+    const discountPct = discount === "" ? 0 : Number(discount) || 0;
+    // If user didn't enter GST for this item, use profile.gstPercent (or 0)
+    const gstPct =
+      gst === "" || gst === null
+        ? Number(profile?.gstPercent || 0)
+        : Number(gst) || 0;
+
+    const netPrice = qty * selling;
+    const discountAmount = (discountPct / 100) * netPrice;
+    const afterDiscount = netPrice - discountAmount;
+    const gstAmount = (gstPct / 100) * afterDiscount;
+    const finalTotal = afterDiscount + gstAmount;
 
     setCart((c) => [
       ...c,
       {
         product: product.value,
         quantity: qty,
-        unitPrice,
-        total: qty * unitPrice,
+        sellingPrice: selling,
+        discount: discountPct,
+        gst: gstPct,
+        netPrice,
+        discountAmount,
+        gstAmount,
+        total: Number(finalTotal.toFixed(2)),
       },
     ]);
 
+    // reset product inputs
     setProduct(null);
     setQuantity("");
     setPrice("");
+    setDiscount("");
+    setGst("");
   };
 
   const removeFromCart = (i) => setCart((c) => c.filter((_, idx) => idx !== i));
 
+  // Transactions stored locally
   const [transactions, setTransactions] = useState(() => {
     const saved = localStorage.getItem("transactions");
     return saved ? JSON.parse(saved) : [];
   });
 
+  // persist transactions and update total sales
   useEffect(() => {
     localStorage.setItem("transactions", JSON.stringify(transactions));
     const total = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
@@ -73,15 +103,17 @@ export default function Sales() {
 
   const [showBillFor, setShowBillFor] = useState(null);
 
+  // Finalize sale: validate, create tx, update customers & sales context
   const handleFinalizeSale = () => {
     if (!customerInfo.name || cart.length === 0) {
       alert("⚠️ Please enter customer details and add products.");
       return;
     }
 
-    const total = cart.reduce((sum, it) => sum + it.total, 0);
+    // transaction total is sum of per-item final totals (already includes discount+gst)
+    const total = cart.reduce((sum, it) => sum + (it.total || 0), 0);
     const paid = parseFloat(paidAmount || 0);
-    const pending = total - paid;
+    const pending = Number((total - paid).toFixed(2));
     const date = new Date().toLocaleString();
     const txId = Date.now() + Math.random();
 
@@ -90,14 +122,16 @@ export default function Sales() {
       customer: customerInfo.name.trim(),
       date,
       items: cart,
-      total,
-      paid,
+      total: Number(total.toFixed(2)),
+      paid: Number(paid.toFixed(2)),
       pending,
       customerInfo: { ...customerInfo },
     };
+
     setTransactions((t) => [...t, tx]);
     setShowBillFor(txId);
 
+    // Send to Sales context; SalesContext handles splitting entries etc.
     addSale({
       customer: customerInfo.name.trim(),
       customerInfo: { ...customerInfo },
@@ -108,6 +142,7 @@ export default function Sales() {
       date,
     });
 
+    // Update or create customer record (totals)
     const normalizePhone = (phone) =>
       (phone || "").replace(/\D/g, "").trim() || "NA";
     const phoneB = normalizePhone(customerInfo.contactPhone);
@@ -117,7 +152,6 @@ export default function Sales() {
         (c.name || "").trim().toLowerCase() ===
         customerInfo.name.trim().toLowerCase();
       const phoneA = normalizePhone(c.contactPhone);
-
       if (phoneA === "NA" || phoneB === "NA") return sameName;
       return sameName && phoneA === phoneB;
     });
@@ -143,6 +177,7 @@ export default function Sales() {
       });
     }
 
+    // reset UI
     setCart([]);
     setCustomerInfo({
       name: "",
@@ -160,6 +195,7 @@ export default function Sales() {
     if (showBillFor === txId) setShowBillFor(null);
   };
 
+  // WhatsApp share text (uses sellingPrice and per-item totals)
   const shareBillOnWhatsApp = (tx) => {
     const text = `🧾 Bill for ${tx.customer}
 Date: ${tx.date}
@@ -167,10 +203,13 @@ Date: ${tx.date}
 ${tx.items
       .map(
         (it, i) =>
-          `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice} = ₹${it.total}`
+          `${i + 1}. ${it.product} x${it.quantity} @₹${it.sellingPrice} = ₹${it.total}`
       )
       .join("\n")}
 
+SubTotal: ₹${tx.items
+      .reduce((s, it) => s + (it.netPrice || it.quantity * it.sellingPrice || 0), 0)
+      .toFixed(2)}
 Total: ₹${tx.total}
 Paid: ₹${tx.paid}
 Pending: ₹${tx.pending}
@@ -183,6 +222,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
+  // Download invoice PDF
   const downloadBillPDF = (tx) => {
     const el = document.getElementById(`bill_${tx.id}`);
     if (!el) return;
@@ -203,7 +243,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
   const totalSales = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
 
   return (
-    <div className="container py-4">
+    <div className="container py-4 pb-5">
       {/* Page Heading */}
       <motion.h2
         className="mb-4 fw-bold text-center"
@@ -220,13 +260,11 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         💰 Sales Management
       </motion.h2>
 
-      {/* ✅ Total Sales Summary Box */}
+      {/* Total Sales Summary Box */}
       <motion.div
         className="p-3 mb-4 rounded-4 shadow-sm text-center text-white"
         style={{
-          // background: "rgba(255, 255, 255, 0.15)",
-                          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
-
+          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
           backdropFilter: "blur(12px)",
           border: "1px solid rgba(255, 255, 255, 0.2)",
         }}
@@ -235,18 +273,16 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         transition={{ delay: 0.3 }}
       >
         <strong className="fs-5">📊 Total Sales: </strong>
-        <span className="fs-4 fw-bold ms-2">
-          ₹{totalSales.toFixed(2)}
-        </span>
+        <span className="fs-4 fw-bold ms-2">₹{totalSales.toFixed(2)}</span>
       </motion.div>
 
       {/* Customer Form */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.4 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
         <CustomerForm />
       </motion.div>
 
       {/* Product Form */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
         <ProductForm
           product={product}
           setProduct={setProduct}
@@ -254,13 +290,17 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
           setQuantity={setQuantity}
           price={price}
           setPrice={setPrice}
+          discount={discount}
+          setDiscount={setDiscount}
+          gst={gst}
+          setGst={setGst}
           productOptions={productOptions}
           handleAddToCart={handleAddToCart}
         />
       </motion.div>
 
       {/* Cart Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
         <CartTable
           cart={cart}
           removeFromCart={removeFromCart}
@@ -269,7 +309,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       </motion.div>
 
       {/* Paid Amount Input */}
-      <motion.div className="mb-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+      <motion.div className="mb-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
         <input
           type="number"
           className="form-control shadow-sm"
@@ -280,7 +320,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       </motion.div>
 
       {/* Bill Preview */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
         <BillPreview
           shareBillOnWhatsApp={shareBillOnWhatsApp}
           downloadBillPDF={downloadBillPDF}
@@ -292,7 +332,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       </motion.div>
 
       {/* Transactions Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.9 }}>
+      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
         <SaleTransactions
           transactions={transactions}
           onView={setShowBillFor}

@@ -6,12 +6,29 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const totalPages = Math.ceil(purchases.length / pageSize);
+  const totalPages = Math.ceil(purchases.length / pageSize) || 1;
+
+  // ✅ Normalize purchases: recalc totalCost properly
+  const normalizedPurchases = purchases.map((p) => {
+    const total = Array.isArray(p.items)
+      ? p.items.reduce(
+          (sum, it) =>
+            sum +
+            (parseFloat(it.buyingPrice) || 0) * (parseFloat(it.quantity) || 0),
+          0
+        )
+      : parseFloat(p.totalCost) || 0;
+
+    return { ...p, totalCost: total };
+  });
 
   const paginatedPurchases = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return purchases.slice().reverse().slice(start, start + pageSize);
-  }, [purchases, currentPage]);
+    return normalizedPurchases
+      .slice()
+      .reverse()
+      .slice(start, start + pageSize);
+  }, [normalizedPurchases, currentPage]);
 
   const toggleSelect = (id) => {
     setSelectedIds((prev) =>
@@ -45,7 +62,7 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
 
   return (
     <div className="table-responsive mt-4">
-      <table className="table align-middle table-hover shadow-sm rounded-3">
+      <table className="table align-middle table-hover shadow-sm rounded-3 mb-2">
         <thead
           style={{
             background: "linear-gradient(135deg, #6a11cb, #2575fc)",
@@ -66,7 +83,7 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
             <th>No.</th>
             <th>Date</th>
             <th>Supplier</th>
-            <th>Total Cost (₹)</th>
+            <th>Total Cost(₹)</th>
             <th>View</th>
             <th>Delete</th>
           </tr>

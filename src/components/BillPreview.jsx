@@ -1,9 +1,9 @@
 // src/components/BillPreview.jsx
 import React from "react";
 import { useProfile } from "../context/ProfileContext";
+import html2canvas from "html2canvas";
 
 export default function BillPreview({
-  shareBillOnWhatsApp,
   downloadBillPDF,
   setShowBillFor,
   showBillFor,
@@ -20,16 +20,41 @@ export default function BillPreview({
       minimumFractionDigits: 2,
     }).format(amount || 0);
 
-  // Find the transaction to preview
+  // Find current transaction
   const currentTx = transactions.find((t) => t.id === showBillFor);
   if (!showBillFor || !currentTx) return null;
 
-  // Calculate totals
-  const grandTotal =
-    currentTx.items?.reduce(
-      (sum, it) => sum + (it.unitPrice || 0) * (it.quantity || 0),
-      0
-    ) || 0;
+  // Row-wise calculation
+  const calculateRow = (it) => {
+    const qty = Number(it.quantity) || 0;
+    const price = Number(it.sellingPrice || it.unitPrice) || 0;
+    const discount = Number(it.discount) || 0;
+    const gst = Number(it.gst) || 0;
+
+    const netPrice = qty * price;
+    const discountAmt = (discount / 100) * netPrice;
+    const afterDiscount = netPrice - discountAmt;
+    const gstAmt = (gst / 100) * afterDiscount;
+    const finalTotal = afterDiscount + gstAmt;
+
+    return { qty, price, netPrice, discount, discountAmt, gst, gstAmt, finalTotal };
+  };
+
+  // Totals
+  let totalQty = 0,
+    subTotal = 0,
+    totalDiscount = 0,
+    totalGST = 0,
+    grandTotal = 0;
+
+  currentTx.items?.forEach((it) => {
+    const { qty, netPrice, discountAmt, gstAmt, finalTotal } = calculateRow(it);
+    totalQty += qty;
+    subTotal += netPrice;
+    totalDiscount += discountAmt;
+    totalGST += gstAmt;
+    grandTotal += finalTotal;
+  });
 
   const paid =
     typeof currentTx.paid === "number"
@@ -38,18 +63,64 @@ export default function BillPreview({
 
   const pending = grandTotal - paid;
 
+  // ✅ WhatsApp (and other apps) share with bill image
+  const shareBillImageOnWhatsApp = async () => {
+    try {
+      const element = document.getElementById(`bill_${currentTx.id}`);
+      if (!element) return;
+
+      const canvas = await html2canvas(element, { scale: 2 });
+      const blob = await new Promise((resolve) =>
+        canvas.toBlob(resolve, "image/png")
+      );
+
+      if (!blob) {
+        alert("❌ Failed to generate bill image");
+        return;
+      }
+
+      const file = new File([blob], `Invoice_${currentTx.id}.png`, {
+        type: "image/png",
+      });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          title: `Invoice from ${shopName}`,
+          text: `Here is your invoice from ${shopName}.`,
+          files: [file],
+        });
+      } else {
+        // fallback: open whatsapp web with text only
+        const phone = currentTx.customerInfo?.contactPhone;
+        if (phone) {
+          const whatsappUrl = `https://wa.me/91${phone}?text=Here is your invoice from ${shopName}. (Image could not be attached automatically)`;
+          window.open(whatsappUrl, "_blank");
+        } else {
+          alert("⚠️ Customer phone number not available!");
+        }
+      }
+    } catch (err) {
+      console.error("WhatsApp share failed:", err);
+    }
+  };
+
   return (
     <>
       <div
         id={`bill_${currentTx.id}`}
         className="border bg-white pt-3 p-3 mb-4 shadow mt-5 rounded"
-        style={{ maxWidth: "800px", margin: "auto" }}
+        style={{
+          maxWidth: "800px",
+          margin: "auto",
+          fontSize: "0.85rem",
+          overflow: "hidden",
+        }}
       >
         {/* Shop Details Header */}
-        <div className="text-center border-bottom pb-2 mb-3">
-          <h2 className="mb-1 fw-bold">{shopName}</h2>
-          <p className="mb-1">
-            <b>Address : </b>
+        <div className="text-center border-bottom pb-2 mb-2">
+          <h4 className="mb-1 fw-bold">{shopName}</h4>
+          <p className="mb-1" style={{ fontSize: "0.8rem" }}>
+            <b>Address: </b>
             {[
               profile?.addressLine1 || "Shop Address",
               profile?.addressLine2,
@@ -60,19 +131,21 @@ export default function BillPreview({
               .filter(Boolean)
               .join(", ")}
           </p>
-          <p className="mb-1">
-            📞 {profile?.phone || "-"} | <b>GSTIN:</b>{" "}
-            {profile?.gstin || "-"}
+          <p className="mb-1" style={{ fontSize: "0.8rem" }}>
+            📞 {profile?.phone || "-"} | <b>GSTIN:</b> {profile?.gstin || "-"}
           </p>
           <small className="text-muted">Tax Invoice</small>
         </div>
 
         {/* Invoice Meta Info */}
-        <div className="d-flex justify-content-between mb-2 lh-sm fw-semibold">
+        <div
+          className="d-flex justify-content-between mb-2 fw-semibold"
+          style={{ fontSize: "0.8rem" }}
+        >
           <span>Invoice ID: {currentTx.id}</span>
           <span>Date: {currentTx.date}</span>
         </div>
-        <div className="mb-3 lh-sm">
+        <div className="mb-2" style={{ fontSize: "0.8rem" }}>
           <p className="mb-1">
             <b>Customer:</b> {currentTx.customer}
           </p>
@@ -85,68 +158,96 @@ export default function BillPreview({
         </div>
 
         {/* Items Table */}
-        <table className="table table-sm table-bordered">
-          <thead className="table-light">
-            <tr>
-              <th>#</th>
-              <th>Description</th>
-              <th className="text-center">Qty</th>
-              <th className="text-end">Unit Price</th>
-              <th className="text-end">Total</th>
-            </tr>
-          </thead>
-          <tbody>
-            {currentTx.items?.map((it, i) => (
-              <tr key={i}>
-                <td>{i + 1}</td>
-                <td>{it.product}</td>
-                <td className="text-center">{it.quantity}</td>
-                <td className="text-end">{formatCurrency(it.unitPrice)}</td>
-                <td className="text-end">
-                  {formatCurrency((it.unitPrice || 0) * (it.quantity || 0))}
-                </td>
+        <div style={{ overflowX: "auto" }}>
+          <table className="table table-sm table-bordered text-center align-middle mb-2">
+            <thead className="table-light" style={{ fontSize: "0.75rem" }}>
+              <tr>
+                <th>#</th>
+                <th>Description</th>
+                <th>Qty</th>
+                <th>Selling Price</th>
+                <th>Discount</th>
+                <th>GST</th>
+                <th>Final Total</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody style={{ fontSize: "0.75rem" }}>
+              {currentTx.items?.map((it, i) => {
+                const { qty, price, discount, gst, finalTotal } = calculateRow(it);
+                return (
+                  <tr key={i}>
+                    <td>{i + 1}</td>
+                    <td>{it.product}</td>
+                    <td>{qty}</td>
+                    <td className="text-end">{formatCurrency(price)}</td>
+                    <td>
+                      {discount}% ({formatCurrency((discount / 100) * qty * price)})
+                    </td>
+                    <td>
+                      {gst}% (
+                      {formatCurrency(
+                        (gst / 100) * (qty * price - (discount / 100) * qty * price)
+                      )}
+                      )
+                    </td>
+                    <td className="text-end fw-semibold">
+                      {formatCurrency(finalTotal)}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+
+            {/* Totals */}
+            <tfoot className="table-secondary fw-semibold" style={{ fontSize: "0.75rem" }}>
+              <tr>
+                <td colSpan={2} className="text-end">TOTAL</td>
+                <td>{totalQty}</td>
+                <td>{formatCurrency(subTotal)}</td>
+                <td>{formatCurrency(totalDiscount)}</td>
+                <td>{formatCurrency(totalGST)}</td>
+                <td className="text-end">{formatCurrency(grandTotal)}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
 
         {/* Totals Section */}
-        <div className="text-end mt-3">
-          <h5>Total: {formatCurrency(grandTotal)}</h5>
-          <h6 className="text-success">Paid: {formatCurrency(paid)}</h6>
-          <h6 className="text-danger">Pending: {formatCurrency(pending)}</h6>
+        <div className="text-end mt-2" style={{ fontSize: "0.8rem" }}>
+          <div>Sub Total: {formatCurrency(subTotal)}</div>
+          <div className="text-danger">Discount: -{formatCurrency(totalDiscount)}</div>
+          <div className="text-primary">GST: +{formatCurrency(totalGST)}</div>
+          <h6 className="fw-bold">
+            <b>Grand Total :</b> {formatCurrency(grandTotal)}
+          </h6>
+          <div className="text-success">
+            <b>Paid :</b> {formatCurrency(paid)}
+          </div>
+          <div className="text-danger">
+            <b>Pending :</b> {formatCurrency(pending)}
+          </div>
         </div>
 
         {/* Footer */}
-        <div className="text-center border-top mt-4 pt-2">
-          <p className="mb-0">
+        <div className="text-center border-top mt-3 pt-2">
+          <p className="mb-0" style={{ fontSize: "0.75rem" }}>
             Thank you for shopping with <b>{shopName}</b>!
           </p>
           <small className="text-muted">
-            This is a computer-generated invoice and does not require a
-            signature.
+            This is a computer-generated invoice and does not require a signature.
           </small>
         </div>
       </div>
 
       {/* Actions */}
-      <div className="d-flex gap-2 mt-3 justify-content-center">
-        <button
-          className="btn btn-success btn-sm"
-          onClick={() => shareBillOnWhatsApp(currentTx)}
-        >
+      <div className="d-flex gap-2 mt-2 justify-content-center">
+        <button className="btn btn-success btn-sm" onClick={shareBillImageOnWhatsApp}>
           📲 WhatsApp
         </button>
-        <button
-          className="btn btn-primary btn-sm"
-          onClick={() => downloadBillPDF(currentTx)}
-        >
+        <button className="btn btn-primary btn-sm" onClick={() => downloadBillPDF(currentTx)}>
           📄 PDF
         </button>
-        <button
-          className="btn btn-outline-dark btn-sm"
-          onClick={() => setShowBillFor(null)}
-        >
+        <button className="btn btn-outline-dark btn-sm" onClick={() => setShowBillFor(null)}>
           ❌ Close
         </button>
       </div>

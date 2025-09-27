@@ -1,3 +1,4 @@
+// src/context/CustomerContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 // ✅ Phone normalization helper
@@ -43,7 +44,7 @@ export const CustomerProvider = ({ children }) => {
       });
 
       if (existing) {
-        // Merge old + new details, increment ledger
+        // Update existing customer (overwrite if new values provided)
         return prev.map((c) =>
           c.id === existing.id
             ? {
@@ -54,10 +55,11 @@ export const CustomerProvider = ({ children }) => {
                 shippingAddress: info.shippingAddress || c.shippingAddress,
                 gstin: info.gstin || c.gstin,
                 totalPurchase:
-                  (c.totalPurchase || 0) + (info.totalPurchase || 0),
-                paidAmount: (c.paidAmount || 0) + (info.paidAmount || 0),
+                  info.totalPurchase != null ? info.totalPurchase : c.totalPurchase || 0,
+                paidAmount:
+                  info.paidAmount != null ? info.paidAmount : c.paidAmount || 0,
                 pendingAmount:
-                  (c.pendingAmount || 0) + (info.pendingAmount || 0),
+                  info.pendingAmount != null ? info.pendingAmount : c.pendingAmount || 0,
               }
             : c
         );
@@ -66,7 +68,7 @@ export const CustomerProvider = ({ children }) => {
         return [
           ...prev,
           {
-            id: Date.now(),
+            id: Date.now() + Math.random(),
             name: info.name,
             contactPhone: info.contactPhone || "",
             billingAddress: info.billingAddress || "",
@@ -96,15 +98,15 @@ export const CustomerProvider = ({ children }) => {
           gstin: updatedData.gstin || c.gstin,
           totalPurchase:
             updatedData.totalPurchase != null
-              ? (c.totalPurchase || 0) + updatedData.totalPurchase
+              ? updatedData.totalPurchase
               : c.totalPurchase || 0,
           paidAmount:
             updatedData.paidAmount != null
-              ? (c.paidAmount || 0) + updatedData.paidAmount
+              ? updatedData.paidAmount
               : c.paidAmount || 0,
           pendingAmount:
             updatedData.pendingAmount != null
-              ? (c.pendingAmount || 0) + updatedData.pendingAmount
+              ? updatedData.pendingAmount
               : c.pendingAmount || 0,
         };
       })

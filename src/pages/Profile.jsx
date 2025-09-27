@@ -91,7 +91,7 @@ export default function Profile() {
   };
 
   return (
-    <div className="container rounded mt-4">
+    <div className="container rounded mt-4 pb-5">
       {/* Agar preview visible aur editing OFF → preview + visiting card */}
       {previewVisible && !editing && (
         <>

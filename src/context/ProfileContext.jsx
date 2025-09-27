@@ -1,17 +1,24 @@
+// src/context/ProfileContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 const ProfileContext = createContext({
-  profile: {},
+  profile: { gstPercent: 0 }, // ✅ always include gstPercent
   updateProfile: () => {},
 });
 
+// Safely parse from localStorage
 const safeParse = (key) => {
   try {
     const raw = localStorage.getItem(key);
     const data = raw ? JSON.parse(raw) : {};
-    return typeof data === "object" && data !== null ? data : {};
+    if (typeof data !== "object" || data === null) return { gstPercent: 0 };
+
+    return {
+      ...data,
+      gstPercent: parseFloat(data.gstPercent) || 0, // ✅ normalize gstPercent
+    };
   } catch {
-    return {};
+    return { gstPercent: 0 };
   }
 };
 
@@ -24,7 +31,12 @@ export function ProfileProvider({ children }) {
   }, [profile]);
 
   const updateProfile = (newData) => {
-    setProfile(newData);
+    const updated = {
+      ...profile, // ✅ preserve old fields
+      ...newData,
+      gstPercent: parseFloat(newData.gstPercent) || 0,
+    };
+    setProfile(updated);
   };
 
   return (

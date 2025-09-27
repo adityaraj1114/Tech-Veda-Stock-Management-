@@ -6,7 +6,7 @@ import { FaShoppingCart, FaCashRegister, FaUsers, FaBoxes } from "react-icons/fa
 export default function FooterNav() {
   return (
     <>
-      <div className="footer-nav d-flex justify-content-around align-items-center">
+      <div className="footer-nav d-flex justify-content-around align-items-center pt-3">
         <NavLink to="/purchase" className="footer-link">
           <FaShoppingCart size={22} />
           <span>Buy</span>

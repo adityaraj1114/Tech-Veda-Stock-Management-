@@ -8,28 +8,51 @@ export default function PurchaseForm({
   setItem,
   quantity,
   setQuantity,
-  cost,
-  setCost,
+  buyingPrice,
+  setBuyingPrice,
+  sellingPrice,
+  setSellingPrice,
   handleAddToCart,
 }) {
+  const onSubmit = (e) => {
+    e.preventDefault();
+
+    const qty = Number(quantity) || 0;
+    const bp = Number(buyingPrice) || 0;
+    const sp = sellingPrice ? Number(sellingPrice) : null;
+
+    const newPurchase = {
+      id: Date.now(),
+      supplier: supplier.trim(),
+      item: item.trim(),
+      quantity: qty,
+      buyingPrice: bp,
+      sellingPrice: sp,
+      totalCost: qty * bp,
+    };
+
+    handleAddToCart(newPurchase);
+
+    // ✅ reset only product fields (supplier will remain same)
+    setItem("");
+    setQuantity("");
+    setBuyingPrice("");
+    setSellingPrice("");
+  };
+
   return (
     <form
-      onSubmit={(e) => {
-        e.preventDefault(); // prevent page reload
-        handleAddToCart();
-      }}
+      onSubmit={onSubmit}
       className="p-4 mb-4 rounded-4 shadow-lg"
       style={{
-        // background: "linear-gradient(135deg, #6a11cb 0%, #2575fc 100%)",
         background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
         color: "#fff",
       }}
     >
       <h5 className="mb-4 fw-bold">🛒 Add Purchase Item</h5>
       <div className="row g-3 align-items-center">
-
         {/* Supplier */}
-        <div className="col-md-3">
+        <div className="col-md-2">
           <input
             type="text"
             className="form-control form-control-lg rounded-pill"
@@ -46,11 +69,11 @@ export default function PurchaseForm({
         </div>
 
         {/* Item */}
-        <div className="col-md-3">
+        <div className="col-md-2">
           <input
             type="text"
             className="form-control form-control-lg rounded-pill"
-            placeholder="Item"
+            placeholder="Item Name"
             value={item}
             onChange={(e) => setItem(e.target.value)}
             required
@@ -80,17 +103,35 @@ export default function PurchaseForm({
           />
         </div>
 
-        {/* Cost */}
+        {/* Buying Price per Unit */}
         <div className="col-md-2">
           <input
             type="number"
             step="0.01"
             className="form-control form-control-lg rounded-pill"
-            placeholder="Cost per Unit (₹)"
-            value={cost}
-            onChange={(e) => setCost(e.target.value)}
+            placeholder="Buying Price per Unit (₹)"
+            value={buyingPrice}
+            onChange={(e) => setBuyingPrice(e.target.value)}
             required
             min="0.01"
+            style={{
+              backgroundColor: "rgba(255,255,255,0.9)",
+              border: "none",
+              color: "#000",
+            }}
+          />
+        </div>
+
+        {/* Selling Price (Optional) */}
+        <div className="col-md-2">
+          <input
+            type="number"
+            step="0.01"
+            className="form-control form-control-lg rounded-pill"
+            placeholder="Selling Price (₹) - Optional"
+            value={sellingPrice}
+            onChange={(e) => setSellingPrice(e.target.value)}
+            min="0"
             style={{
               backgroundColor: "rgba(255,255,255,0.9)",
               border: "none",
