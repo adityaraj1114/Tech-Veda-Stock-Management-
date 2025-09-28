@@ -75,11 +75,52 @@ export default function BillPreview({
   const pending = grandTotal - paid;
 
   // ✅ WhatsApp share with bill image and entered number
+  // const shareBillImageOnWhatsApp = async () => {
+  //   try {
+  //     const element = document.getElementById(`bill_${currentTx.id}`);
+  //     if (!element) return;
+
+  //     const canvas = await html2canvas(element, { scale: 2 });
+  //     const blob = await new Promise((resolve) =>
+  //       canvas.toBlob(resolve, "image/png")
+  //     );
+
+  //     if (!blob) {
+  //       alert("❌ Failed to generate bill image");
+  //       return;
+  //     }
+
+  //     const file = new File([blob], `Invoice_${currentTx.id}.png`, {
+  //       type: "image/png",
+  //     });
+
+  //     if (navigator.canShare && navigator.canShare({ files: [file] })) {
+  //       await navigator.share({
+  //         title: `Invoice from ${shopName}`,
+  //         text: `Here is your invoice from ${shopName}.`,
+  //         files: [file],
+  //       });
+  //     } else {
+  //       // fallback: open whatsapp web with text only using entered number
+  //       const phone = whatsappNumber || currentTx.customerInfo?.contactPhone;
+  //       if (phone) {
+  //         const whatsappUrl = `https://wa.me/91${phone}?text=Here is your invoice from ${shopName}. (Image may not be attached automatically)`;
+  //         window.open(whatsappUrl, "_blank");
+  //       } else {
+  //         alert("⚠️ Please enter WhatsApp number!");
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error("WhatsApp share failed:", err);
+  //   }
+  // };
+
   const shareBillImageOnWhatsApp = async () => {
     try {
       const element = document.getElementById(`bill_${currentTx.id}`);
       if (!element) return;
 
+      // 1. Bill ko canvas me convert karna
       const canvas = await html2canvas(element, { scale: 2 });
       const blob = await new Promise((resolve) =>
         canvas.toBlob(resolve, "image/png")
@@ -94,6 +135,7 @@ export default function BillPreview({
         type: "image/png",
       });
 
+      // 2. Agar browser support karta hai to Web Share API se direct image bhejo
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: `Invoice from ${shopName}`,
@@ -101,10 +143,23 @@ export default function BillPreview({
           files: [file],
         });
       } else {
-        // fallback: open whatsapp web with text only using entered number
-        const phone = whatsappNumber || currentTx.customerInfo?.contactPhone;
-        if (phone) {
-          const whatsappUrl = `https://wa.me/91${phone}?text=Here is your invoice from ${shopName}. (Image may not be attached automatically)`;
+        // 3. Fallback: WhatsApp Web/App ke through text share karo
+        const phoneRaw = whatsappNumber || currentTx.customerInfo?.contactPhone;
+
+        if (phoneRaw) {
+          // sirf digits rakho (+, space, - hata do)
+          let phone = phoneRaw.replace(/\D/g, "");
+
+          // agar sirf 10 digit dala hai to +91 prepend kar do
+          if (phone.length === 10) {
+            phone = `91${phone}`;
+          }
+
+          const message = encodeURIComponent(
+            `Here is your invoice from ${shopName}. (Image may not be attached automatically)`
+          );
+
+          const whatsappUrl = `https://wa.me/${phone}?text=${message}`;
           window.open(whatsappUrl, "_blank");
         } else {
           alert("⚠️ Please enter WhatsApp number!");
@@ -112,6 +167,7 @@ export default function BillPreview({
       }
     } catch (err) {
       console.error("WhatsApp share failed:", err);
+      alert("❌ WhatsApp share failed. Please try again.");
     }
   };
 
@@ -184,7 +240,8 @@ export default function BillPreview({
             </thead>
             <tbody style={{ fontSize: "0.75rem" }}>
               {currentTx.items?.map((it, i) => {
-                const { qty, price, discount, gst, finalTotal } = calculateRow(it);
+                const { qty, price, discount, gst, finalTotal } =
+                  calculateRow(it);
                 return (
                   <tr key={i}>
                     <td>{i + 1}</td>
@@ -192,12 +249,14 @@ export default function BillPreview({
                     <td>{qty}</td>
                     <td>{formatCurrency(price)}</td>
                     <td>
-                      {discount}% ({formatCurrency((discount / 100) * qty * price)})
+                      {discount}% (
+                      {formatCurrency((discount / 100) * qty * price)})
                     </td>
                     <td>
                       {gst}% (
                       {formatCurrency(
-                        (gst / 100) * (qty * price - (discount / 100) * qty * price)
+                        (gst / 100) *
+                          (qty * price - (discount / 100) * qty * price)
                       )}
                       )
                     </td>
