@@ -118,8 +118,8 @@ export default function BillPreview({
       >
         {/* Shop Details Header */}
         <div className="text-center border-bottom pb-2 mb-2">
-          <h4 className="mb-1 fw-bold">{shopName}</h4>
-          <p className="mb-1" style={{ fontSize: "0.8rem" }}>
+          <h4 className="mb-1 fw-bold text-primary">{shopName}</h4>
+          <p className="mb-0" style={{ fontSize: "0.8rem" }}>
             <b>Address: </b>
             {[
               profile?.addressLine1 || "Shop Address",
@@ -139,13 +139,13 @@ export default function BillPreview({
 
         {/* Invoice Meta Info */}
         <div
-          className="d-flex justify-content-between mb-2 fw-semibold"
-          style={{ fontSize: "0.8rem" }}
+          className="d-flex justify-content-between mb-1"
+          style={{ fontSize: "0.7rem" }}
         >
           <span>Invoice ID: {currentTx.id}</span>
           <span>Date: {currentTx.date}</span>
         </div>
-        <div className="mb-2" style={{ fontSize: "0.8rem" }}>
+        <div className="mb-2" style={{ fontSize: "0.8rem", lineHeight: "1.1" }}>
           <p className="mb-1">
             <b>Customer:</b> {currentTx.customer}
           </p>
@@ -160,13 +160,13 @@ export default function BillPreview({
         {/* Items Table */}
         <div style={{ overflowX: "auto" }}>
           <table className="table table-sm table-bordered text-center align-middle mb-2">
-            <thead className="table-light" style={{ fontSize: "0.75rem" }}>
+            <thead className="table-light" style={{ fontSize: "0.8rem" }}>
               <tr>
                 <th>#</th>
                 <th>Description</th>
                 <th>Qty</th>
                 <th>Selling Price</th>
-                <th>Discount</th>
+                <th>Dis %</th>
                 <th>GST</th>
                 <th>Final Total</th>
               </tr>
@@ -179,7 +179,7 @@ export default function BillPreview({
                     <td>{i + 1}</td>
                     <td>{it.product}</td>
                     <td>{qty}</td>
-                    <td className="text-end">{formatCurrency(price)}</td>
+                    <td>{formatCurrency(price)}</td>
                     <td>
                       {discount}% ({formatCurrency((discount / 100) * qty * price)})
                     </td>

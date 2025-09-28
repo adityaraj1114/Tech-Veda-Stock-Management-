@@ -61,8 +61,15 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
   };
 
   return (
-    <div className="table-responsive mt-4">
-      <table className="table align-middle table-hover shadow-sm rounded-3 mb-2">
+    <div className="table-responsive mt-2 px-2 py-5 shadow-sm rounded-4"
+    initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        style={{
+          background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+        }}
+    >
+      <table className="table align-middle table-hover table-bordered shadow-sm rounded-3 mb-4">
         <thead
           style={{
             background: "linear-gradient(135deg, #6a11cb, #2575fc)",
@@ -83,7 +90,7 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
             <th>No.</th>
             <th>Date</th>
             <th>Supplier</th>
-            <th>Total Cost(₹)</th>
+            <th>Total Cost (₹)</th>
             <th>View</th>
             <th>Delete</th>
           </tr>

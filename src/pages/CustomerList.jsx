@@ -137,27 +137,26 @@ export default function CustomerList() {
       animate={{ opacity: 1, y: 0 }}
     >
       {/* Header */}
-      <div className="mb-4 d-flex align-items-center justify-content-between">
+      <motion.h2
+              className="mb-4 fw-bold text-center"
+              initial={{ opacity: 0, y: -30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              style={{
+                background: "linear-gradient(90deg, #075a53ff, #09a344ff)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                fontSize: "1.6rem",
+              }}
+            >
+              <Users /> Customers
+            </motion.h2>
+      
+      {/* <div className="mb-4 d-flex align-items-center justify-content-between">
         <h2 className="fw-bold text-gradient d-flex align-items-center gap-2">
           <Users /> Customers
         </h2>
-        <div className="d-flex gap-2">
-          <button
-            className="btn btn-outline-success d-flex align-items-center gap-1"
-            onClick={exportCSV}
-            disabled={!filtered.length}
-          >
-            <FileText size={18} /> CSV
-          </button>
-          <button
-            className="btn btn-outline-primary d-flex align-items-center gap-1"
-            onClick={exportExcel}
-            disabled={!filtered.length}
-          >
-            <FileSpreadsheet size={18} /> Excel
-          </button>
-        </div>
-      </div>
+      </div> */}
 
       {/* Search & Filter */}
       <div className="row mb-3">
@@ -175,7 +174,7 @@ export default function CustomerList() {
             />
           </div>
         </div>
-        <div className="col-md-6 mb-2">
+        <div className="col-md-6 mb-2 d-flex justify-content-md-end align-items-center gap-2">
           <select
             className="form-select"
             value={filterType}
@@ -188,6 +187,23 @@ export default function CustomerList() {
             <option value="pending">Pending Balance Only</option>
             <option value="cleared">Cleared (No Pending)</option>
           </select>
+
+          <div className="d-flex gap-2">
+          <button
+            className="btn btn-outline-success d-flex align-items-center gap-1"
+            onClick={exportCSV}
+            disabled={!filtered.length}
+          >
+            <FileText size={18} /> CSV
+          </button>
+          <button
+            className="btn btn-outline-primary d-flex align-items-center gap-1"
+            onClick={exportExcel}
+            disabled={!filtered.length}
+          >
+            <FileSpreadsheet size={18} /> Excel
+          </button>
+        </div>
         </div>
       </div>
 

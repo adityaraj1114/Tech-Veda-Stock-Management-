@@ -147,7 +147,10 @@ const Dashboard = () => {
       </div>
 
       {/* Recent Activity */}
-      <div className="card shadow-sm p-3 mt-4 rounded-4">
+      <div className="card shadow-sm p-3 mt-4 rounded-4"
+              style={{ background: "linear-gradient(135deg, #7F00FF, #00c6ff)", color: "#fff" }}
+
+      >
         <h5 className="mb-3">🕒 Recent Activity</h5>
         <div className="table-responsive">
           <table className="table table-striped align-middle">

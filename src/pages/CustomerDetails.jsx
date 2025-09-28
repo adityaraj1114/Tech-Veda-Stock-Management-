@@ -259,9 +259,10 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
   return (
     <div className="container p-0 mb-5">
       <motion.div
-        className="card shadow p-4 rounded-4"
+        className="card shadow p-1 rounded-4"
         style={{
-          background: "linear-gradient(135deg, #091257ff 0%, #2505c2ff 100%)",
+          // background: "linear-gradient(135deg, #091257ff 0%, #2505c2ff 100%)",
+          background: "linear-gradient(135deg, #a0f2fbff 0%, #fbd6f6ff 100%)",
           backdropFilter: "blur(12px)",
           border: "1px solid rgba(255, 255, 255, 0.2)",
         }}
@@ -269,7 +270,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <h2 className="mb-3 text-center text-primary">📋 Customer Details</h2>
+        <h2 className="mb-3 pt-4 text-center text-dark">📋 Customer Details</h2>
 
         {/* Customer Info */}
         <motion.div
@@ -283,7 +284,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
           animate={{ opacity: 1 }}
           transition={{ delay: 0.3 }}
         >
-          <h4 className="text-dark pb-1 text-center">
+          <h4 className="text-primary pb-1 text-center">
             <b>{displayInfo.name}</b>
           </h4>
           <p>
@@ -355,7 +356,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
             </motion.div>
 
             {totalPending > 0 && (
-              <div className="mt-3">
+              <div className="mt-3 px-5">
                 <button
                   className="btn btn-success w-100"
                   onClick={handleRecordPayment}
@@ -365,12 +366,14 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
               </div>
             )}
 
-            <button
-              className="btn btn-success mt-3 w-100"
-              onClick={notifyOnWhatsApp}
-            >
-              📲 Notify on WhatsApp
-            </button>
+            <div className="mt-3 px-5">
+              <button
+                className="btn btn-success w-100"
+                onClick={notifyOnWhatsApp}
+              >
+                📲 Notify on WhatsApp
+              </button>
+            </div>
           </div>
         </motion.div>
 
@@ -390,35 +393,35 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         </div>
 
         {/* Transactions Table */}
-        <h5 className="mt-4 mb-4 text-white">
+        <h5 className="mt-4 mb-3 px-3 text-primary">
           <b>📑 Transactions</b>
         </h5>
-        <div className="row g-2 mb-5">
-          <div className="col-md-4">
-            <input
-              type="date"
-              className="form-control"
-              value={searchDate}
-              onChange={(e) => {
-                setSearchDate(e.target.value);
-                setCurrentPage(1);
-              }}
-            />
-          </div>
+        <div className="row g-2 mb-2">
           <div className="col-md-auto d-flex align-items-center gap-2">
+            <div className="col-md-4">
+              <input
+                type="date"
+                className="form-control"
+                value={searchDate}
+                onChange={(e) => {
+                  setSearchDate(e.target.value);
+                  setCurrentPage(1);
+                }}
+              />
+            </div>
             <button
               className="btn btn-outline-success"
               onClick={exportCSV}
               disabled={!filteredSales.length}
             >
-              📥 Export CSV
+              📥 CSV
             </button>
             <button
               className="btn btn-outline-primary"
               onClick={exportExcel}
               disabled={!filteredSales.length}
             >
-              📊 Export Excel
+              📊 Excel
             </button>
           </div>
         </div>

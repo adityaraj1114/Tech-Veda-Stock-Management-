@@ -139,7 +139,21 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
   return (
     <>
       {/* 🔍 Search + Filter */}
-      <div className="row g-2 mb-3 mt-5">
+      <div className="row g-2 mb-3 mt-5 text-center">
+        <div
+          className="col-md"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.6 }}
+          style={{
+            background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          <h3>📄 Sales Transactions</h3>
+        </div>
+
         <div className="col-md">
           <input
             className="form-control"
@@ -151,51 +165,60 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
             }}
           />
         </div>
-        <div className="col-md">
-          <input
-            type="number"
-            className="form-control"
-            placeholder="Min Amount"
-            value={minAmt}
-            onChange={(e) => {
-              setMinAmt(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
-        <div className="col-md">
-          <input
-            type="number"
-            className="form-control"
-            placeholder="Max Amount"
-            value={maxAmt}
-            onChange={(e) => {
-              setMaxAmt(e.target.value);
-              setCurrentPage(1);
-            }}
-          />
-        </div>
+
         <div className="col-md-auto d-flex align-items-center gap-2">
+          <div className="col-md">
+            <input
+              type="number"
+              className="form-control"
+              placeholder="Min Amount"
+              value={minAmt}
+              onChange={(e) => {
+                setMinAmt(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
+          <div className="col-md">
+            <input
+              type="number"
+              className="form-control"
+              placeholder="Max Amount"
+              value={maxAmt}
+              onChange={(e) => {
+                setMaxAmt(e.target.value);
+                setCurrentPage(1);
+              }}
+            />
+          </div>
           <button
             className="btn btn-outline-success"
             onClick={exportCSV}
             disabled={!filtered.length}
           >
-            📥 Export CSV
+            📥 CSV
           </button>
           <button
             className="btn btn-outline-primary"
             onClick={exportExcel}
             disabled={!filtered.length}
           >
-            📊 Export Excel
+            📊 Excel
           </button>
         </div>
       </div>
 
       {/* 📄 Transactions Table */}
-      <div className="table-responsive mb-3">
-        <h5>📄 Transactions</h5>
+
+      <div
+        className="table-responsive mb-5 p-4 rounded fw-semibold text-center"
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+        style={{
+          background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+        }}
+      >
         <table className="table table-bordered table-hover align-middle">
           <thead className="table-light">
             <tr>
@@ -298,19 +321,19 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
       <hr></hr>
       <div className="d-flex gap-2 mb-5">
         <button
-            className="btn btn-outline-danger"
-            onClick={handleDeleteSelected}
-            disabled={!selectedIds.length}
-          >
-            🗑 Delete Selected
-          </button>
-          <button
-            className="btn btn-danger"
-            onClick={handleDeleteAll}
-            disabled={!filtered.length}
-          >
-            🧹 Delete All
-          </button>
+          className="btn btn-outline-danger"
+          onClick={handleDeleteSelected}
+          disabled={!selectedIds.length}
+        >
+          🗑 Delete Selected
+        </button>
+        <button
+          className="btn btn-danger"
+          onClick={handleDeleteAll}
+          disabled={!filtered.length}
+        >
+          🧹 Delete All
+        </button>
       </div>
     </>
   );
