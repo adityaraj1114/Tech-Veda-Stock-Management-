@@ -1,5 +1,5 @@
 // src/components/BillPreview.jsx
-import React from "react";
+import React, { useState } from "react";
 import { useProfile } from "../context/ProfileContext";
 import html2canvas from "html2canvas";
 
@@ -11,6 +11,8 @@ export default function BillPreview({
 }) {
   const { profile } = useProfile();
   const shopName = profile?.shopName || "My Shop";
+
+  const [whatsappNumber, setWhatsappNumber] = useState("");
 
   // Currency formatter
   const formatCurrency = (amount) =>
@@ -37,7 +39,16 @@ export default function BillPreview({
     const gstAmt = (gst / 100) * afterDiscount;
     const finalTotal = afterDiscount + gstAmt;
 
-    return { qty, price, netPrice, discount, discountAmt, gst, gstAmt, finalTotal };
+    return {
+      qty,
+      price,
+      netPrice,
+      discount,
+      discountAmt,
+      gst,
+      gstAmt,
+      finalTotal,
+    };
   };
 
   // Totals
@@ -63,7 +74,7 @@ export default function BillPreview({
 
   const pending = grandTotal - paid;
 
-  // ✅ WhatsApp (and other apps) share with bill image
+  // ✅ WhatsApp share with bill image and entered number
   const shareBillImageOnWhatsApp = async () => {
     try {
       const element = document.getElementById(`bill_${currentTx.id}`);
@@ -90,13 +101,13 @@ export default function BillPreview({
           files: [file],
         });
       } else {
-        // fallback: open whatsapp web with text only
-        const phone = currentTx.customerInfo?.contactPhone;
+        // fallback: open whatsapp web with text only using entered number
+        const phone = whatsappNumber || currentTx.customerInfo?.contactPhone;
         if (phone) {
-          const whatsappUrl = `https://wa.me/91${phone}?text=Here is your invoice from ${shopName}. (Image could not be attached automatically)`;
+          const whatsappUrl = `https://wa.me/91${phone}?text=Here is your invoice from ${shopName}. (Image may not be attached automatically)`;
           window.open(whatsappUrl, "_blank");
         } else {
-          alert("⚠️ Customer phone number not available!");
+          alert("⚠️ Please enter WhatsApp number!");
         }
       }
     } catch (err) {
@@ -199,9 +210,14 @@ export default function BillPreview({
             </tbody>
 
             {/* Totals */}
-            <tfoot className="table-secondary fw-semibold" style={{ fontSize: "0.75rem" }}>
+            <tfoot
+              className="table-secondary fw-semibold"
+              style={{ fontSize: "0.75rem" }}
+            >
               <tr>
-                <td colSpan={2} className="text-end">TOTAL</td>
+                <td colSpan={2} className="text-end">
+                  TOTAL
+                </td>
                 <td>{totalQty}</td>
                 <td>{formatCurrency(subTotal)}</td>
                 <td>{formatCurrency(totalDiscount)}</td>
@@ -215,7 +231,9 @@ export default function BillPreview({
         {/* Totals Section */}
         <div className="text-end mt-2" style={{ fontSize: "0.8rem" }}>
           <div>Sub Total: {formatCurrency(subTotal)}</div>
-          <div className="text-danger">Discount: -{formatCurrency(totalDiscount)}</div>
+          <div className="text-danger">
+            Discount: -{formatCurrency(totalDiscount)}
+          </div>
           <div className="text-primary">GST: +{formatCurrency(totalGST)}</div>
           <h6 className="fw-bold">
             <b>Grand Total :</b> {formatCurrency(grandTotal)}
@@ -234,22 +252,42 @@ export default function BillPreview({
             Thank you for shopping with <b>{shopName}</b>!
           </p>
           <small className="text-muted">
-            This is a computer-generated invoice and does not require a signature.
+            This is a computer-generated invoice and does not require a
+            signature.
           </small>
         </div>
       </div>
 
-      {/* Actions */}
-      <div className="d-flex gap-2 mt-2 justify-content-center">
-        <button className="btn btn-success btn-sm" onClick={shareBillImageOnWhatsApp}>
-          📲 WhatsApp
-        </button>
-        <button className="btn btn-primary btn-sm" onClick={() => downloadBillPDF(currentTx)}>
-          📄 PDF
-        </button>
-        <button className="btn btn-outline-dark btn-sm" onClick={() => setShowBillFor(null)}>
-          ❌ Close
-        </button>
+      {/* WhatsApp Input + Actions */}
+      <div className="d-flex flex-column align-items-center gap-2 mt-2">
+        <input
+          type="text"
+          className="form-control form-control-sm"
+          placeholder="Enter WhatsApp number (without +91)"
+          value={whatsappNumber}
+          onChange={(e) => setWhatsappNumber(e.target.value)}
+          style={{ maxWidth: "300px" }}
+        />
+        <div className="d-flex gap-2">
+          <button
+            className="btn btn-success btn-sm"
+            onClick={shareBillImageOnWhatsApp}
+          >
+            📲 WhatsApp
+          </button>
+          <button
+            className="btn btn-primary btn-sm"
+            onClick={() => downloadBillPDF(currentTx)}
+          >
+            📄 PDF
+          </button>
+          <button
+            className="btn btn-outline-dark btn-sm"
+            onClick={() => setShowBillFor(null)}
+          >
+            ❌ Close
+          </button>
+        </div>
       </div>
     </>
   );
