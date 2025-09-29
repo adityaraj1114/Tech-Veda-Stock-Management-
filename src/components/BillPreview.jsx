@@ -74,53 +74,12 @@ export default function BillPreview({
 
   const pending = grandTotal - paid;
 
-  // ✅ WhatsApp share with bill image and entered number
-  // const shareBillImageOnWhatsApp = async () => {
-  //   try {
-  //     const element = document.getElementById(`bill_${currentTx.id}`);
-  //     if (!element) return;
-
-  //     const canvas = await html2canvas(element, { scale: 2 });
-  //     const blob = await new Promise((resolve) =>
-  //       canvas.toBlob(resolve, "image/png")
-  //     );
-
-  //     if (!blob) {
-  //       alert("❌ Failed to generate bill image");
-  //       return;
-  //     }
-
-  //     const file = new File([blob], `Invoice_${currentTx.id}.png`, {
-  //       type: "image/png",
-  //     });
-
-  //     if (navigator.canShare && navigator.canShare({ files: [file] })) {
-  //       await navigator.share({
-  //         title: `Invoice from ${shopName}`,
-  //         text: `Here is your invoice from ${shopName}.`,
-  //         files: [file],
-  //       });
-  //     } else {
-  //       // fallback: open whatsapp web with text only using entered number
-  //       const phone = whatsappNumber || currentTx.customerInfo?.contactPhone;
-  //       if (phone) {
-  //         const whatsappUrl = `https://wa.me/91${phone}?text=Here is your invoice from ${shopName}. (Image may not be attached automatically)`;
-  //         window.open(whatsappUrl, "_blank");
-  //       } else {
-  //         alert("⚠️ Please enter WhatsApp number!");
-  //       }
-  //     }
-  //   } catch (err) {
-  //     console.error("WhatsApp share failed:", err);
-  //   }
-  // };
-
+  // ✅ Share bill as image
   const shareBillImageOnWhatsApp = async () => {
     try {
       const element = document.getElementById(`bill_${currentTx.id}`);
       if (!element) return;
 
-      // 1. Bill ko canvas me convert karna
       const canvas = await html2canvas(element, { scale: 2 });
       const blob = await new Promise((resolve) =>
         canvas.toBlob(resolve, "image/png")
@@ -135,7 +94,6 @@ export default function BillPreview({
         type: "image/png",
       });
 
-      // 2. Agar browser support karta hai to Web Share API se direct image bhejo
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           title: `Invoice from ${shopName}`,
@@ -143,17 +101,10 @@ export default function BillPreview({
           files: [file],
         });
       } else {
-        // 3. Fallback: WhatsApp Web/App ke through text share karo
         const phoneRaw = whatsappNumber || currentTx.customerInfo?.contactPhone;
-
         if (phoneRaw) {
-          // sirf digits rakho (+, space, - hata do)
           let phone = phoneRaw.replace(/\D/g, "");
-
-          // agar sirf 10 digit dala hai to +91 prepend kar do
-          if (phone.length === 10) {
-            phone = `91${phone}`;
-          }
+          if (phone.length === 10) phone = `91${phone}`;
 
           const message = encodeURIComponent(
             `Here is your invoice from ${shopName}. (Image may not be attached automatically)`
@@ -168,6 +119,51 @@ export default function BillPreview({
     } catch (err) {
       console.error("WhatsApp share failed:", err);
       alert("❌ WhatsApp share failed. Please try again.");
+    }
+  };
+
+  // ✅ Share bill details (text only)
+  const shareBillDetailOnWhatsApp = () => {
+    try {
+      const phoneRaw = whatsappNumber || currentTx.customerInfo?.contactPhone;
+      if (!phoneRaw) {
+        alert("⚠️ Please enter WhatsApp number!");
+        return;
+      }
+
+      let phone = phoneRaw.replace(/\D/g, "");
+      if (phone.length === 10) phone = `91${phone}`;
+
+      // Bill summary text
+      let details = `🧾 *Invoice from ${shopName}*\n`;
+      details += `Invoice ID: ${currentTx.id}\n`;
+      details += `Date: ${currentTx.date}\n\n`;
+      details += `👤 Customer: ${currentTx.customer}\n`;
+      details += `📞 Phone: ${currentTx.customerInfo?.contactPhone || "-"}\n\n`;
+      details += `Items:\n`;
+
+      currentTx.items?.forEach((it, i) => {
+        const { qty, price, finalTotal } = calculateRow(it);
+        details += `${i + 1}. ${it.product} - ${qty} x ${formatCurrency(
+          price
+        )} = ${formatCurrency(finalTotal)}\n`;
+      });
+
+      details += `\nSubtotal: ${formatCurrency(subTotal)}`;
+      details += `\nDiscount: -${formatCurrency(totalDiscount)}`;
+      details += `\nGST: +${formatCurrency(totalGST)}`;
+      details += `\n*Grand Total: ${formatCurrency(grandTotal)}*`;
+      details += `\nPaid: ${formatCurrency(paid)}`;
+      details += `\nPending: ${formatCurrency(pending)}`;
+      details += `\n\n🙏 Thank you for shopping with ${shopName}!`;
+
+      const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(
+        details
+      )}`;
+      window.open(whatsappUrl, "_blank");
+    } catch (err) {
+      console.error("WhatsApp details share failed:", err);
+      alert("❌ Failed to share bill details.");
     }
   };
 
@@ -332,21 +328,29 @@ export default function BillPreview({
             className="btn btn-success btn-sm"
             onClick={shareBillImageOnWhatsApp}
           >
-            📲 WhatsApp
+            📲 Share Img
           </button>
+
           <button
             className="btn btn-primary btn-sm"
             onClick={() => downloadBillPDF(currentTx)}
           >
             📄 PDF
           </button>
+
           <button
-            className="btn btn-outline-dark btn-sm"
-            onClick={() => setShowBillFor(null)}
+            className="btn btn-success btn-sm"
+            onClick={shareBillDetailOnWhatsApp}
           >
-            ❌ Close
+            📲 Bill Detail's
           </button>
         </div>
+        <button
+          className="btn btn-outline-dark btn-sm"
+          onClick={() => setShowBillFor(null)}
+        >
+          ❌ Close
+        </button>
       </div>
     </>
   );

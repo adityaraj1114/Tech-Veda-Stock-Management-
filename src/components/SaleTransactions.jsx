@@ -48,6 +48,20 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
     return filtered.slice(start, start + pageSize);
   }, [filtered, currentPage]);
 
+  // ✅ Totals calculation
+  const totalSale = filtered.reduce(
+    (sum, tx) => sum + (parseFloat(tx.total) || 0),
+    0
+  );
+  const totalPaid = filtered.reduce(
+    (sum, tx) => sum + (parseFloat(tx.paid) || 0),
+    0
+  );
+  const totalPending = filtered.reduce(
+    (sum, tx) => sum + (parseFloat(tx.pending) || 0),
+    0
+  );
+
   const formatDate = (dateStr) => {
     if (!dateStr) return "-";
     const d = new Date(dateStr);
@@ -142,9 +156,6 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
       <div className="row g-2 mb-3 mt-5 text-center">
         <div
           className="col-md"
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
           style={{
             background: "linear-gradient(90deg, #00c6ff, #0072ff)",
             WebkitBackgroundClip: "text",
@@ -209,18 +220,14 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
       </div>
 
       {/* 📄 Transactions Table */}
-
       <div
         className="table-responsive mb-5 p-4 rounded fw-semibold text-center"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
         style={{
           background: "linear-gradient(90deg, #00c6ff, #0072ff)",
         }}
       >
         <table className="table table-bordered table-hover align-middle">
-          <thead className="table-light">
+          <thead className="table-secondary">
             <tr>
               <th>
                 <input
@@ -293,6 +300,19 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
               ))
             )}
           </tbody>
+
+          {/* ✅ Totals Row */}
+          <tfoot className="table-secondary fw-bold">
+            <tr>
+              <td colSpan="5" className="text-end">
+                TOTAL:
+              </td>
+              <td className="text-primary">₹{totalSale.toFixed(2)}</td>
+              <td className="text-success">₹{totalPaid.toFixed(2)}</td>
+              <td className="text-danger">₹{totalPending.toFixed(2)}</td>
+              <td colSpan="2"></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
 
@@ -306,7 +326,7 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
           >
             ⬅️ Previous
           </button>
-          <span>
+          <span className="fw-bold">
             Page {currentPage} of {totalPages}
           </span>
           <button
@@ -318,7 +338,8 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
           </button>
         </div>
       )}
-      <hr></hr>
+
+      {/* 🗑 Bulk Actions */}
       <div className="d-flex gap-2 mb-5">
         <button
           className="btn btn-outline-danger"

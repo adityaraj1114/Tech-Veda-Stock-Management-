@@ -138,25 +138,19 @@ export default function CustomerList() {
     >
       {/* Header */}
       <motion.h2
-              className="mb-4 fw-bold text-center"
-              initial={{ opacity: 0, y: -30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              style={{
-                background: "linear-gradient(90deg, #075a53ff, #09a344ff)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                fontSize: "1.6rem",
-              }}
-            >
-              <Users /> Customers
-            </motion.h2>
-      
-      {/* <div className="mb-4 d-flex align-items-center justify-content-between">
-        <h2 className="fw-bold text-gradient d-flex align-items-center gap-2">
-          <Users /> Customers
-        </h2>
-      </div> */}
+        className="mb-4 fw-bold text-center"
+        initial={{ opacity: 0, y: -30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6 }}
+        style={{
+          background: "linear-gradient(90deg, #075a53ff, #09a344ff)",
+          WebkitBackgroundClip: "text",
+          WebkitTextFillColor: "transparent",
+          fontSize: "1.6rem",
+        }}
+      >
+        <Users /> Customers
+      </motion.h2>
 
       {/* Search & Filter */}
       <div className="row mb-3">
@@ -189,21 +183,21 @@ export default function CustomerList() {
           </select>
 
           <div className="d-flex gap-2">
-          <button
-            className="btn btn-outline-success d-flex align-items-center gap-1"
-            onClick={exportCSV}
-            disabled={!filtered.length}
-          >
-            <FileText size={18} /> CSV
-          </button>
-          <button
-            className="btn btn-outline-primary d-flex align-items-center gap-1"
-            onClick={exportExcel}
-            disabled={!filtered.length}
-          >
-            <FileSpreadsheet size={18} /> Excel
-          </button>
-        </div>
+            <button
+              className="btn btn-outline-success d-flex align-items-center gap-1"
+              onClick={exportCSV}
+              disabled={!filtered.length}
+            >
+              <FileText size={18} /> CSV
+            </button>
+            <button
+              className="btn btn-outline-primary d-flex align-items-center gap-1"
+              onClick={exportExcel}
+              disabled={!filtered.length}
+            >
+              <FileSpreadsheet size={18} /> Excel
+            </button>
+          </div>
         </div>
       </div>
 
@@ -212,84 +206,96 @@ export default function CustomerList() {
         <p className="text-muted">🚫 No customers found</p>
       ) : (
         <motion.div
-          style={{ overflowX: "auto" }}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
+          className="card shadow-sm p-3 mb-4"
+          style={{
+            background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
+            borderRadius: "20px",
+            overflow: "auto",
+          }}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
         >
-          <table className="table table-hover align-middle shadow-sm">
-            <thead className="table-dark">
-              <tr>
-                <th>No.</th>
-                <th>Name</th>
-                <th>Phone</th>
-                <th>Total Purchase (₹)</th>
-                <th className="text-success">Paid (₹)</th>
-                <th className="text-danger">Pending (₹)</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginated.map((c, i) => {
-                const customerId =
-                  c.id || `${c.name}_${normalizePhone(c.contactPhone)}`;
-                return (
-                  <motion.tr
-                    key={customerId}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                  >
-                    <td>{(page - 1) * pageSize + i + 1}</td>
-                    <td>{c.name}</td>
-                    <td>{c.contactPhone || "—"}</td>
-                    <td>₹{parseFloat(c.totalPurchase || 0).toFixed(2)}</td>
-                    <td className="text-success">
-                      ₹{parseFloat(c.paidAmount || 0).toFixed(2)}
-                    </td>
-                    <td className="text-danger">
-                      ₹{parseFloat(c.pendingAmount || 0).toFixed(2)}
-                    </td>
-                    <td className="d-flex gap-2">
-                      <button
-                        className="btn btn-sm btn-info d-flex align-items-center gap-1"
-                        onClick={() =>
-                          navigate(`/customers/${customerId}`, { state: c })
-                        }
-                      >
-                        <Eye size={14} /> View
-                      </button>
-                      <button
-                        className="btn btn-sm btn-danger d-flex align-items-center gap-1"
-                        onClick={() => {
-                          if (
-                            window.confirm(
-                              `Delete ${c.name || "this customer"}?`
-                            )
-                          ) {
-                            deleteCustomer(customerId);
+          <h3 className="text-white">Customers</h3>
+
+          <div className="table-responsive">
+            <table className="table table-hover align-middle shadow-sm">
+              <thead className="table-secondary">
+                <tr>
+                  <th>No.</th>
+                  <th>Name</th>
+                  <th>Phone</th>
+                  <th>Total Purchase (₹)</th>
+                  <th className="text-success">Paid (₹)</th>
+                  <th className="text-danger">Pending (₹)</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {paginated.map((c, i) => {
+                  const customerId =
+                    c.id || `${c.name}_${normalizePhone(c.contactPhone)}`;
+                  return (
+                    <motion.tr
+                      key={customerId}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                    >
+                      <td>{(page - 1) * pageSize + i + 1}</td>
+                      <td>{c.name}</td>
+                      <td>{c.contactPhone || "—"}</td>
+                      <td>₹{parseFloat(c.totalPurchase || 0).toFixed(2)}</td>
+                      <td className="text-success">
+                        ₹{parseFloat(c.paidAmount || 0).toFixed(2)}
+                      </td>
+                      <td className="text-danger">
+                        ₹{parseFloat(c.pendingAmount || 0).toFixed(2)}
+                      </td>
+                      <td className="d-flex gap-2">
+                        <button
+                          className="btn btn-sm btn-info d-flex align-items-center gap-1"
+                          onClick={() =>
+                            navigate(`/customers/${customerId}`, { state: c })
                           }
-                        }}
-                      >
-                        <Trash2 size={14} /> Delete
-                      </button>
-                    </td>
-                  </motion.tr>
-                );
-              })}
-            </tbody>
-            <tfoot className="table-light fw-bold">
-              <tr>
-                <td colSpan={3} className="text-end">
-                  TOTAL
-                </td>
-                <td>₹{totals.totalPurchase.toFixed(2)}</td>
-                <td className="text-success">₹{totals.paidAmount.toFixed(2)}</td>
-                <td className="text-danger">
-                  ₹{totals.pendingAmount.toFixed(2)}
-                </td>
-                <td>—</td>
-              </tr>
-            </tfoot>
-          </table>
+                        >
+                          <Eye size={14} /> View
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger d-flex align-items-center gap-1"
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Delete ${c.name || "this customer"}?`
+                              )
+                            ) {
+                              deleteCustomer(customerId);
+                            }
+                          }}
+                        >
+                          <Trash2 size={14} /> Delete
+                        </button>
+                      </td>
+                    </motion.tr>
+                  );
+                })}
+              </tbody>
+              <tfoot className="table-secondary fw-bold">
+                <tr>
+                  <td colSpan={3} className="text-end">
+                    TOTAL
+                  </td>
+                  <td>₹{totals.totalPurchase.toFixed(2)}</td>
+                  <td className="text-success">
+                    ₹{totals.paidAmount.toFixed(2)}
+                  </td>
+                  <td className="text-danger">
+                    ₹{totals.pendingAmount.toFixed(2)}
+                  </td>
+                  <td>—</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </motion.div>
       )}
 

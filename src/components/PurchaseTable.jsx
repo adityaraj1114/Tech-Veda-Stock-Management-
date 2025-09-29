@@ -22,6 +22,12 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
     return { ...p, totalCost: total };
   });
 
+  // ✅ Calculate Total Purchased (all purchases ka sum)
+  const totalPurchased = normalizedPurchases.reduce(
+    (sum, p) => sum + (parseFloat(p.totalCost) || 0),
+    0
+  );
+
   const paginatedPurchases = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return normalizedPurchases
@@ -61,138 +67,157 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
   };
 
   return (
-    <div className="table-responsive mt-2 px-2 py-5 shadow-sm rounded-4"
-    initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        style={{
-          background: "linear-gradient(90deg, #00c6ff, #0072ff)",
-        }}
-    >
-      <table className="table align-middle table-hover table-bordered shadow-sm rounded-3 mb-4">
-        <thead
+    <>
+      <div>
+        <div
+          className="table-responsive mt-2 px-3 py-3 shadow-sm rounded-4"
           style={{
-            background: "linear-gradient(135deg, #6a11cb, #2575fc)",
-            color: "#fff",
+            background: "linear-gradient(90deg, #00c6ff, #0072ff)",
           }}
         >
-          <tr>
-            <th>
-              <input
-                type="checkbox"
-                onChange={selectAllOnPage}
-                checked={
-                  paginatedPurchases.length > 0 &&
-                  paginatedPurchases.every((p) => selectedIds.includes(p.id))
-                }
-              />
-            </th>
-            <th>No.</th>
-            <th>Date</th>
-            <th>Supplier</th>
-            <th>Total Cost (₹)</th>
-            <th>View</th>
-            <th>Delete</th>
-          </tr>
-        </thead>
-        <tbody>
-          {paginatedPurchases.length > 0 ? (
-            paginatedPurchases.map((p, i) => (
-              <tr key={p.id} className="table-light">
-                <td>
+          <table className="table align-middle table-hover table-bordered shadow-sm rounded-3 mb-2">
+            <thead
+              className="table-secondary text-white"
+              style={{
+                background: "linear-gradient(135deg, #6a11cb, #2575fc)",
+                color: "#fff",
+              }}
+            >
+              <tr>
+                <th>
                   <input
                     type="checkbox"
-                    checked={selectedIds.includes(p.id)}
-                    onChange={() => toggleSelect(p.id)}
+                    onChange={selectAllOnPage}
+                    checked={
+                      paginatedPurchases.length > 0 &&
+                      paginatedPurchases.every((p) =>
+                        selectedIds.includes(p.id)
+                      )
+                    }
                   />
+                </th>
+                <th>No.</th>
+                <th>Date</th>
+                <th>Supplier</th>
+                <th>Total Cost (₹)</th>
+                <th>View</th>
+                <th>Delete</th>
+              </tr>
+            </thead>
+            <tbody className="table-group-divider table-light">
+              {paginatedPurchases.length > 0 ? (
+                paginatedPurchases.map((p, i) => (
+                  <tr key={p.id} className="table-light">
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(p.id)}
+                        onChange={() => toggleSelect(p.id)}
+                      />
+                    </td>
+                    <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                    <td>{p.date}</td>
+                    <td>{p.supplier}</td>
+                    <td className="fw-bold text-danger">
+                      ₹{parseFloat(p.totalCost).toFixed(2)}
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-info fw-bold"
+                        style={{
+                          background:
+                            "linear-gradient(45deg, #17ead9, #6078ea)",
+                          border: "none",
+                          color: "#fff",
+                        }}
+                        onClick={() => onView(p)}
+                      >
+                        👁
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-danger fw-bold"
+                        style={{
+                          background:
+                            "linear-gradient(45deg, #ff416c, #ff4b2b)",
+                          border: "none",
+                          color: "#fff",
+                        }}
+                        onClick={() => onDelete(p.id)}
+                      >
+                        ❌
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan="7" className="text-center text-muted">
+                    No purchases found 🚫
+                  </td>
+                </tr>
+              )}
+            </tbody>
+
+            {/* ✅ Total Purchased Row */}
+            <tfoot className="table-secondary fw-bold">
+              <tr>
+                <td colSpan="4" className="text-end">
+                  TOTAL PURCHASED:
                 </td>
-                <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                <td>{p.date}</td>
-                <td>{p.supplier}</td>
-                <td className="fw-bold text-danger">
-                  ₹{parseFloat(p.totalCost).toFixed(2)}
-                </td>
-                <td>
-                  <button
-                    className="btn btn-sm btn-info fw-bold"
-                    style={{
-                      background: "linear-gradient(45deg, #17ead9, #6078ea)",
-                      border: "none",
-                      color: "#fff",
-                    }}
-                    onClick={() => onView(p)}
-                  >
-                    👁
-                  </button>
-                </td>
-                <td>
-                  <button
-                    className="btn btn-sm btn-danger fw-bold"
-                    style={{
-                      background: "linear-gradient(45deg, #ff416c, #ff4b2b)",
-                      border: "none",
-                      color: "#fff",
-                    }}
-                    onClick={() => onDelete(p.id)}
-                  >
-                    ❌
-                  </button>
+                <td colSpan="3" className="text-danger">
+                  ₹{totalPurchased.toFixed(2)}
                 </td>
               </tr>
-            ))
-          ) : (
-            <tr>
-              <td colSpan="7" className="text-center text-muted">
-                No purchases found 🚫
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+            </tfoot>
+          </table>
+        </div>
 
-      {/* Pagination Controls */}
-      <div className="d-flex justify-content-between align-items-center mb-3 mt-2">
-        <button
-          className="btn btn-sm btn-outline-secondary"
-          disabled={currentPage === 1}
-          onClick={() => setCurrentPage((p) => p - 1)}
-        >
-          ⬅️ Previous
-        </button>
-        <span className="fw-bold">
-          Page {currentPage} of {totalPages}
-        </span>
-        <button
-          className="btn btn-sm btn-outline-secondary"
-          disabled={currentPage === totalPages}
-          onClick={() => setCurrentPage((p) => p + 1)}
-        >
-          ➡️ Next
-        </button>
-      </div>
+        {/* Pagination Controls */}
+        <div className="d-flex justify-content-between align-items-center mb-3 mt-2">
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            disabled={currentPage === 1}
+            onClick={() => setCurrentPage((p) => p - 1)}
+          >
+            ⬅️ Previous
+          </button>
+          <span className="fw-bold">
+            Page {currentPage} of {totalPages}
+          </span>
+          <button
+            className="btn btn-sm btn-outline-secondary"
+            disabled={currentPage === totalPages}
+            onClick={() => setCurrentPage((p) => p + 1)}
+          >
+            ➡️ Next
+          </button>
+        </div>
 
-      {/* Bulk Actions */}
-      <div className="d-flex justify-content-start gap-2 mb-4">
-        <button
-          className="btn btn-sm fw-bold"
-          style={{
-            background: "linear-gradient(45deg, #ff416c, #ff4b2b)",
-            color: "#fff",
-            border: "none",
-          }}
-          onClick={handleDeleteSelected}
-          disabled={!selectedIds.length}
-        >
-          🗑 Delete Selected
-        </button>
-        <button
-          className="btn btn-sm btn-outline-danger fw-bold"
-          onClick={handleDeleteAll}
-          disabled={!purchases.length}
-        >
-          🧹 Delete All
-        </button>
+        {/* Bulk Actions */}
+        <div className="d-flex justify-content-start gap-2 mb-4">
+          <button
+            className="btn btn-sm fw-bold"
+            style={{
+              background: "linear-gradient(45deg, #ff416c, #ff4b2b)",
+              color: "#fff",
+              border: "none",
+            }}
+            onClick={handleDeleteSelected}
+            disabled={!selectedIds.length}
+          >
+            🗑 Delete Selected
+          </button>
+          <button
+            className="btn btn-sm btn-outline-danger fw-bold"
+            onClick={handleDeleteAll}
+            disabled={!purchases.length}
+          >
+            🧹 Delete All
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
