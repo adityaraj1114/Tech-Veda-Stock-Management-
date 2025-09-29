@@ -155,7 +155,7 @@ const CurrentStock = ({ search = "" }) => {
         </div>
       </div>
       <motion.div
-        className="card shadow-sm p-3 mb-4"
+        className="card shadow-sm p-3 mb-3"
         style={{
           background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
           borderRadius: "20px",
@@ -167,8 +167,8 @@ const CurrentStock = ({ search = "" }) => {
         <h5 className="mb-3 text-white">📦 Current Stock</h5>
 
         {/* Stock Table */}
-        <div className="table-responsive">
-          <table className="table table-bordered align-middle rounded-3">
+        <div className="table-responsive rounded">
+          <table className="table table-bordered align-middle">
             <thead className="table-secondary">
               <tr>
                 <th>
@@ -239,9 +239,9 @@ const CurrentStock = ({ search = "" }) => {
             </tbody>
           </table>
         </div>
-        <div className="d-flex justify-content-between align-items-center mb-2 mt-2">
+        <div className="d-flex justify-content-center gap-4 align-items-center mb-4">
           <button
-            className="btn btn-sm btn-outline-dark bg-white ms-2 mt-2"
+            className="btn btn-sm btn-outline-dark bg-danger text-white ms-2 mt-2"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
@@ -252,7 +252,7 @@ const CurrentStock = ({ search = "" }) => {
             Page {currentPage} of {totalPages}{" "}
           </span>
           <button
-            className="btn btn-sm btn-outline-dark bg-white ms-1"
+            className="btn btn-sm btn-outline-dark text-white bg-danger ms-1"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >

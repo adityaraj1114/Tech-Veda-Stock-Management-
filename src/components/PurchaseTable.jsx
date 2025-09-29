@@ -70,129 +70,130 @@ export default function PurchaseTable({ purchases, onView, onDelete }) {
     <>
       <div>
         <div
-          className="table-responsive mt-2 px-3 py-3 shadow-sm rounded-4"
+          className="table-responsive mt-2 px-3 py-3 mb-2 shadow-sm rounded-4"
           style={{
-            background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+            background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
           }}
         >
-          <table className="table align-middle table-hover table-bordered shadow-sm rounded-3 mb-2">
-            <thead
-              className="table-secondary text-white"
-              style={{
-                background: "linear-gradient(135deg, #6a11cb, #2575fc)",
-                color: "#fff",
-              }}
-            >
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    onChange={selectAllOnPage}
-                    checked={
-                      paginatedPurchases.length > 0 &&
-                      paginatedPurchases.every((p) =>
-                        selectedIds.includes(p.id)
-                      )
-                    }
-                  />
-                </th>
-                <th>No.</th>
-                <th>Date</th>
-                <th>Supplier</th>
-                <th>Total Cost (₹)</th>
-                <th>View</th>
-                <th>Delete</th>
-              </tr>
-            </thead>
-            <tbody className="table-group-divider table-light">
-              {paginatedPurchases.length > 0 ? (
-                paginatedPurchases.map((p, i) => (
-                  <tr key={p.id} className="table-light">
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.includes(p.id)}
-                        onChange={() => toggleSelect(p.id)}
-                      />
-                    </td>
-                    <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                    <td>{p.date}</td>
-                    <td>{p.supplier}</td>
-                    <td className="fw-bold text-danger">
-                      ₹{parseFloat(p.totalCost).toFixed(2)}
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-info fw-bold"
-                        style={{
-                          background:
-                            "linear-gradient(45deg, #17ead9, #6078ea)",
-                          border: "none",
-                          color: "#fff",
-                        }}
-                        onClick={() => onView(p)}
-                      >
-                        👁
-                      </button>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-sm btn-danger fw-bold"
-                        style={{
-                          background:
-                            "linear-gradient(45deg, #ff416c, #ff4b2b)",
-                          border: "none",
-                          color: "#fff",
-                        }}
-                        onClick={() => onDelete(p.id)}
-                      >
-                        ❌
-                      </button>
+          <div className="table-responsive rounded">
+            <table className="table align-middle table-hover table-bordered shadow-sm rounded-3 mb-2">
+              <thead
+                className="table-secondary text-white"
+                style={{
+                  color: "#fff",
+                }}
+              >
+                <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      onChange={selectAllOnPage}
+                      checked={
+                        paginatedPurchases.length > 0 &&
+                        paginatedPurchases.every((p) =>
+                          selectedIds.includes(p.id)
+                        )
+                      }
+                    />
+                  </th>
+                  <th>No.</th>
+                  <th>Date</th>
+                  <th>Supplier</th>
+                  <th>Total Cost (₹)</th>
+                  <th>View</th>
+                  <th>Delete</th>
+                </tr>
+              </thead>
+              <tbody className="table-group-divider table-light">
+                {paginatedPurchases.length > 0 ? (
+                  paginatedPurchases.map((p, i) => (
+                    <tr key={p.id} className="table-light">
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.includes(p.id)}
+                          onChange={() => toggleSelect(p.id)}
+                        />
+                      </td>
+                      <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                      <td>{p.date}</td>
+                      <td>{p.supplier}</td>
+                      <td className="fw-bold text-danger">
+                        ₹{parseFloat(p.totalCost).toFixed(2)}
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-info fw-bold"
+                          style={{
+                            background:
+                              "linear-gradient(45deg, #17ead9, #6078ea)",
+                            border: "none",
+                            color: "#fff",
+                          }}
+                          onClick={() => onView(p)}
+                        >
+                          👁
+                        </button>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-sm btn-danger fw-bold"
+                          style={{
+                            background:
+                              "linear-gradient(45deg, #ff416c, #ff4b2b)",
+                            border: "none",
+                            color: "#fff",
+                          }}
+                          onClick={() => onDelete(p.id)}
+                        >
+                          ❌
+                        </button>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="text-center text-muted">
+                      No purchases found 🚫
                     </td>
                   </tr>
-                ))
-              ) : (
+                )}
+              </tbody>
+
+              {/* ✅ Total Purchased Row */}
+              <tfoot className="table-secondary fw-bold">
                 <tr>
-                  <td colSpan="7" className="text-center text-muted">
-                    No purchases found 🚫
+                  <td colSpan="4" className="text-end">
+                    TOTAL PURCHASED:
+                  </td>
+                  <td colSpan="3" className="text-danger">
+                    ₹{totalPurchased.toFixed(2)}
                   </td>
                 </tr>
-              )}
-            </tbody>
+              </tfoot>
+            </table>
+          </div>
 
-            {/* ✅ Total Purchased Row */}
-            <tfoot className="table-secondary fw-bold">
-              <tr>
-                <td colSpan="4" className="text-end">
-                  TOTAL PURCHASED:
-                </td>
-                <td colSpan="3" className="text-danger">
-                  ₹{totalPurchased.toFixed(2)}
-                </td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
-
-        {/* Pagination Controls */}
-        <div className="d-flex justify-content-between align-items-center mb-3 mt-2">
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            disabled={currentPage === 1}
-            onClick={() => setCurrentPage((p) => p - 1)}
-          >
-            ⬅️ Previous
-          </button>
-          <span className="fw-bold">
-            Page {currentPage} of {totalPages}
-          </span>
-          <button
-            className="btn btn-sm btn-outline-secondary"
-            disabled={currentPage === totalPages}
-            onClick={() => setCurrentPage((p) => p + 1)}
-          >
-            ➡️ Next
-          </button>
+          {/* Pagination Controls */}
+          <div className="d-flex justify-content-center gap-4 align-items-center pt-2 mb-4">
+            <button
+              className="btn btn-sm btn-outline-secondary text-white bg-danger"
+              disabled={currentPage === 1}
+              onClick={() => setCurrentPage((p) => p - 1)}
+            >
+              ⬅️ Previous
+            </button>
+            <span className="fw-bold align-self-center text-white">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button
+              className="btn btn-sm btn-outline-secondary text-white bg-danger"
+              disabled={currentPage === totalPages}
+              onClick={() => setCurrentPage((p) => p + 1)}
+            >
+              ➡️ Next
+            </button>
+          </div>
         </div>
 
         {/* Bulk Actions */}

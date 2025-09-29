@@ -218,7 +218,7 @@ export default function CustomerList() {
         >
           <h3 className="text-white">Customers</h3>
 
-          <div className="table-responsive">
+          <div className="table-responsive rounded">
             <table className="table table-hover align-middle shadow-sm">
               <thead className="table-secondary">
                 <tr>
@@ -295,32 +295,35 @@ export default function CustomerList() {
                 </tr>
               </tfoot>
             </table>
-          </div>
-        </motion.div>
-      )}
 
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="d-flex justify-content-center mt-3 gap-2">
+            
+          </div>
+          {/* Pagination Controls */}
+      {/* {totalPages > 1 && ( */}
+        <div className="d-flex justify-content-center gap-4 align-items-center mt-2 mb-4">
           <button
-            className="btn btn-outline-secondary"
+            className="btn btn-outline-secondary text-white bg-danger"
             disabled={page === 1}
             onClick={() => setPage((p) => p - 1)}
           >
             ⬅ Prev
           </button>
-          <span className="align-self-center">
+          <span className="align-self-center text-white">
             Page {page} of {totalPages}
           </span>
           <button
-            className="btn btn-outline-secondary"
+            className="btn btn-outline-secondary text-white bg-danger"
             disabled={page === totalPages}
             onClick={() => setPage((p) => p + 1)}
           >
             Next ➡
           </button>
         </div>
+        </motion.div>
       )}
+
+      
+      
     </motion.div>
   );
 }

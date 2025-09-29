@@ -157,12 +157,12 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
         <div
           className="col-md"
           style={{
-            background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+            background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
             WebkitBackgroundClip: "text",
             WebkitTextFillColor: "transparent",
           }}
         >
-          <h3>📄 Sales Transactions</h3>
+          <h1>📄 Sales Transactions</h1>
         </div>
 
         <div className="col-md">
@@ -221,123 +221,124 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
 
       {/* 📄 Transactions Table */}
       <div
-        className="table-responsive mb-5 p-4 rounded fw-semibold text-center"
+        className="table-responsive mb-2 p-2 pt-4 pb-4 rounded fw-semibold text-center"
         style={{
-          background: "linear-gradient(90deg, #00c6ff, #0072ff)",
+          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
         }}
       >
-        <table className="table table-bordered table-hover align-middle">
-          <thead className="table-secondary">
-            <tr>
-              <th>
-                <input
-                  type="checkbox"
-                  onChange={selectAllOnPage}
-                  checked={
-                    paginated.length > 0 &&
-                    paginated.every((tx) => selectedIds.includes(tx.id))
-                  }
-                />
-              </th>
-              <th>No.</th>
-              <th>Date</th>
-              <th>Customer</th>
-              <th>Mobile</th>
-              <th>Total (₹)</th>
-              <th>Paid</th>
-              <th>Pending</th>
-              <th>View</th>
-              <th>Delete</th>
-            </tr>
-          </thead>
-          <tbody>
-            {paginated.length === 0 ? (
+        <div className="table-responsive rounded">
+          <table className="table table-bordered table-hover align-middle">
+            <thead className="table-secondary">
               <tr>
-                <td colSpan={10} className="text-center text-muted">
-                  No transactions found 🚫
-                </td>
+                <th>
+                  <input
+                    type="checkbox"
+                    onChange={selectAllOnPage}
+                    checked={
+                      paginated.length > 0 &&
+                      paginated.every((tx) => selectedIds.includes(tx.id))
+                    }
+                  />
+                </th>
+                <th>No.</th>
+                <th>Date</th>
+                <th>Customer</th>
+                <th>Mobile</th>
+                <th>Total (₹)</th>
+                <th>Paid</th>
+                <th>Pending</th>
+                <th>View</th>
+                <th>Delete</th>
               </tr>
-            ) : (
-              paginated.map((tx, i) => (
-                <tr key={tx.id || i}>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={selectedIds.includes(tx.id)}
-                      onChange={() => toggleSelect(tx.id)}
-                    />
-                  </td>
-                  <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                  <td>{formatDate(tx.date)}</td>
-                  <td>{tx.customer}</td>
-                  <td>{tx.customerInfo?.contactPhone || "—"}</td>
-                  <td className="fw-bold">
-                    ₹{parseFloat(tx.total ?? 0).toFixed(2)}
-                  </td>
-                  <td className="text-success">
-                    ₹{parseFloat(tx.paid ?? 0).toFixed(2)}
-                  </td>
-                  <td className="text-danger">
-                    ₹{parseFloat(tx.pending ?? 0).toFixed(2)}
-                  </td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-info"
-                      onClick={() => onView(tx.id)}
-                    >
-                      👁️
-                    </button>
-                  </td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-danger"
-                      onClick={() => onDelete(tx.id)}
-                    >
-                      ❌
-                    </button>
+            </thead>
+            <tbody>
+              {paginated.length === 0 ? (
+                <tr>
+                  <td colSpan={10} className="text-center text-muted">
+                    No transactions found 🚫
                   </td>
                 </tr>
-              ))
-            )}
-          </tbody>
+              ) : (
+                paginated.map((tx, i) => (
+                  <tr key={tx.id || i}>
+                    <td>
+                      <input
+                        type="checkbox"
+                        checked={selectedIds.includes(tx.id)}
+                        onChange={() => toggleSelect(tx.id)}
+                      />
+                    </td>
+                    <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                    <td>{formatDate(tx.date)}</td>
+                    <td>{tx.customer}</td>
+                    <td>{tx.customerInfo?.contactPhone || "—"}</td>
+                    <td className="fw-bold">
+                      ₹{parseFloat(tx.total ?? 0).toFixed(2)}
+                    </td>
+                    <td className="text-success">
+                      ₹{parseFloat(tx.paid ?? 0).toFixed(2)}
+                    </td>
+                    <td className="text-danger">
+                      ₹{parseFloat(tx.pending ?? 0).toFixed(2)}
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-info"
+                        onClick={() => onView(tx.id)}
+                      >
+                        👁️
+                      </button>
+                    </td>
+                    <td>
+                      <button
+                        className="btn btn-sm btn-danger"
+                        onClick={() => onDelete(tx.id)}
+                      >
+                        ❌
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
 
-          {/* ✅ Totals Row */}
-          <tfoot className="table-secondary fw-bold">
-            <tr>
-              <td colSpan="5" className="text-end">
-                TOTAL:
-              </td>
-              <td className="text-primary">₹{totalSale.toFixed(2)}</td>
-              <td className="text-success">₹{totalPaid.toFixed(2)}</td>
-              <td className="text-danger">₹{totalPending.toFixed(2)}</td>
-              <td colSpan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
-      </div>
-
-      {/* 📌 Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="d-flex justify-content-between align-items-center mb-3">
+            {/* ✅ Totals Row */}
+            <tfoot className="table-secondary fw-bold">
+              <tr>
+                <td colSpan="5" className="text-end">
+                  TOTAL:
+                </td>
+                <td className="text-primary">₹{totalSale.toFixed(2)}</td>
+                <td className="text-success">₹{totalPaid.toFixed(2)}</td>
+                <td className="text-danger">₹{totalPending.toFixed(2)}</td>
+                <td colSpan="2"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        {/* 📌 Pagination Controls */}
+        {/* {totalPages > 1 && ( */}
+        <div className="d-flex justify-content-center gap-4 align-items-center mt-2 pb-4">
           <button
-            className="btn btn-outline-secondary"
+            className="btn btn-outline-secondary bg-danger text-white"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
             ⬅️ Previous
           </button>
-          <span className="fw-bold">
+          <span className="fw-bold text-white">
             Page {currentPage} of {totalPages}
           </span>
           <button
-            className="btn btn-outline-secondary"
+            className="btn btn-outline-secondary bg-danger text-white"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >
             Next ➡️
           </button>
         </div>
-      )}
+        {/* )} */}
+      </div>
 
       {/* 🗑 Bulk Actions */}
       <div className="d-flex gap-2 mb-5">

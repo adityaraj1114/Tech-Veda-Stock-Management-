@@ -196,20 +196,7 @@ export default function Purchases() {
         clearCart={() => setPurchaseCart([])}
       />
 
-      {/* Section Heading */}
-      <motion.h3
-        className="mb-3 mt-5 fw-semibold text-center"
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6 }}
-        style={{
-          background: "linear-gradient(90deg, #00c6ff, #0072ff)",
-          WebkitBackgroundClip: "text",
-          WebkitTextFillColor: "transparent",
-        }}
-      >
-        📑 Purchase Transactions
-      </motion.h3>
+      
 
       {/* Search + Export */}
       <motion.div
