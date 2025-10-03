@@ -257,12 +257,12 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
   };
 
   return (
-    <div className="container p-0 mb-5">
+    <div className="container p-0 pt-2 mb-5">
       <motion.div
         className="card shadow p-1 rounded-4"
         style={{
-          // background: "linear-gradient(135deg, #091257ff 0%, #2505c2ff 100%)",
-          background: "linear-gradient(135deg, #a0f2fbff 0%, #fbd6f6ff 100%)",
+          background: "linear-gradient(135deg, #252425ff 0%, #353534ff 40%, #f2fb74ff 100%)",
+          // background: "linear-gradient(135deg, #a0f2fbff 0%, #fbd6f6ff 100%)",
           backdropFilter: "blur(12px)",
           border: "1px solid rgba(255, 255, 255, 0.2)",
         }}
@@ -270,7 +270,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         animate={{ opacity: 1 }}
         transition={{ delay: 0.3 }}
       >
-        <h2 className="mb-3 pt-4 text-center text-dark">📋 Customer Details</h2>
+        <h2 className="mb-3 pt-4 text-center text-white">📋 Customer Details</h2>
 
         {/* Customer Info */}
         <motion.div
@@ -358,7 +358,8 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
             {totalPending > 0 && (
               <div className="mt-3 px-5">
                 <button
-                  className="btn btn-success w-100"
+                  className="btn btn-success w-100 text-white fw-bold"
+                  style={{background: "linear-gradient(90deg, #fa5fe5ff, #2575fc)"}}
                   onClick={handleRecordPayment}
                 >
                   💵 Record Payment
@@ -368,7 +369,8 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
 
             <div className="mt-3 px-5">
               <button
-                className="btn btn-success w-100"
+                className="btn btn-success w-100 text-dark fw-bold"
+                style={{background: "linear-gradient(90deg, #2cf85fff, #1df3afff)"}}
                 onClick={notifyOnWhatsApp}
               >
                 📲 Notify on WhatsApp
@@ -393,9 +395,9 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         </div>
 
         {/* Transactions Table */}
-        <h5 className="mt-4 mb-3 px-3 text-primary">
+        <h3 className="mt-4 mb-3 px-3 text-white text-center mb-2">
           <b>📑 Transactions</b>
-        </h5>
+        </h3>
         <div className="row g-2 mb-2">
           <div className="col-md-auto d-flex align-items-center gap-2">
             <div className="col-md-4">
