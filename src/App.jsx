@@ -15,6 +15,7 @@ import FooterNav from "./components/FooterNav";
 // import SellerList from "./pages/SellerList";
 import CustomerDetails from "./pages/CustomerDetails";
 import ProfitLossReport from "./pages/ProfitLossReport";
+import CustomerCatalog from "./pages/CustomerCatalog";
 
 import PrivateRoute from "./routes/PrivateRoute";
 
@@ -25,6 +26,7 @@ import { CustomerProvider } from "./context/CustomerContext";
 import { SalesProvider, useSales } from "./context/SalesContext";
 import { PurchaseProvider, usePurchase } from "./context/PurchaseContext";
 import { InventoryProvider } from "./context/InventoryContext";
+import { CustomerCatalogProvider } from "./context/CustomerCatalogContext";
 
 // ✅ Wrapper to pass sales & purchases into InventoryProvider
 function AppProviders({ children }) {
@@ -46,6 +48,7 @@ function AppRoutes() {
       {/* Public Routes */}
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/customerCatalog" element={<CustomerCatalog />} />
 
       {/* Protected Routes */}
       <Route
@@ -131,22 +134,27 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <ProfileProvider>
-        <CustomerProvider>
-          <SalesProvider>
-            <PurchaseProvider>
-              <AppProviders>
-                <Navbar />
-                <div className="container p-0" style={{ paddingBottom: "80px" }}>
-                  {/* paddingBottom to avoid content hidden behind FooterNav */}
-                  <AppRoutes />
-                </div>
-                <FooterNav />
-              </AppProviders>
-            </PurchaseProvider>
-          </SalesProvider>
-        </CustomerProvider>
-      </ProfileProvider>
+      <CustomerCatalogProvider>
+        <ProfileProvider>
+          <CustomerProvider>
+            <SalesProvider>
+              <PurchaseProvider>
+                <AppProviders>
+                  <Navbar />
+                  <div
+                    className="container p-0"
+                    style={{ paddingBottom: "80px" }}
+                  >
+                    {/* paddingBottom to avoid content hidden behind FooterNav */}
+                    <AppRoutes />
+                  </div>
+                  <FooterNav />
+                </AppProviders>
+              </PurchaseProvider>
+            </SalesProvider>
+          </CustomerProvider>
+        </ProfileProvider>
+      </CustomerCatalogProvider>
     </AuthProvider>
   );
 }

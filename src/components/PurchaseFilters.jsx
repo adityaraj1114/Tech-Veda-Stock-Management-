@@ -15,7 +15,7 @@ export default function PurchaseFilters({
 
       {/* Section Heading */}
             <motion.h3
-              className="mb-3 mt-5 fw-semibold text-center"
+              className="mb-3 mt-5 fw-bold text-center"
               initial={{ opacity: 0, y: -10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 }}
@@ -23,6 +23,7 @@ export default function PurchaseFilters({
                 background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
                 WebkitBackgroundClip: "text",
                 WebkitTextFillColor: "transparent",
+                fontSize: "1.65rem",
               }}
             >
               📑 Purchase Transactions

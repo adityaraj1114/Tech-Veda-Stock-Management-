@@ -73,6 +73,7 @@ const Navbar = () => {
     { name: "Sale", path: "/sale", auth: true },
     { name: "Profile", path: "/profile", auth: true },
     { name: "Sign Up", path: "/signup", auth: false },
+    { name: "Customer Catalog", path: "/customerCatalog", auth: false },
   ];
 
   return (
@@ -122,7 +123,7 @@ const Navbar = () => {
       <div className="container-fluid">
         {/* Shop Name */}
         <span className="navbar-brand mb-0 h4 text-white fw-bold">
-          🏪 {shopName}
+          <h1>🏪 {shopName}</h1>
         </span>
 
         {/* Hamburger */}

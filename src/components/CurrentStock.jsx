@@ -185,11 +185,11 @@ const CurrentStock = ({ search = "" }) => {
                 </th>
                 <th>No.</th>
                 <th>Item</th>
-                <th>Buying Price (₹)</th>
-                <th>Selling Price (₹)</th>
                 <th>Purchased</th>
                 <th>Sold</th>
                 <th>In Stock</th>
+                <th>Buying Price (₹)</th>
+                <th>Selling Price (₹)</th>
                 <th>Total Value (₹)</th>
                 <th>Action</th>
               </tr>
@@ -206,10 +206,8 @@ const CurrentStock = ({ search = "" }) => {
                   </td>
                   <td>{(currentPage - 1) * pageSize + i + 1}</td>
                   <td>{inv.item || "N/A"}</td>
-                  <td>₹{(inv.buyingPrice || 0).toFixed(2)}</td>
-                  <td>₹{(inv.sellingPrice || 0).toFixed(2)}</td>
-                  <td>{inv.purchased || 0}</td>
-                  <td>{inv.sold || 0}</td>
+                  <td className="text-primary">{inv.purchased || 0}</td>
+                  <td className="text-primary">{inv.sold || 0}</td>
                   <td
                     className={`fw-bold ${
                       inv.inStock > 0 ? "text-success" : "text-danger"
@@ -217,6 +215,8 @@ const CurrentStock = ({ search = "" }) => {
                   >
                     {inv.inStock}
                   </td>
+                  <td>₹{(inv.buyingPrice || 0).toFixed(2)}</td>
+                  <td>₹{(inv.sellingPrice || 0).toFixed(2)}</td>
                   <td>₹{(inv.totalValue || 0).toFixed(2)}</td>
                   <td>
                     <button
@@ -261,21 +261,21 @@ const CurrentStock = ({ search = "" }) => {
         </div>
       </motion.div>
       <div className="d-flex gap-2 mb-5">
-          <button
-            className="btn btn-outline-danger"
-            onClick={handleDeleteSelected}
-            disabled={!selectedItems.length}
-          >
-            🗑 Del Selected
-          </button>
-          <button
-            className="btn btn-danger"
-            onClick={handleDeleteAll}
-            disabled={!filteredInventory.length}
-          >
-            🧹 Delete All
-          </button>
-        </div>
+        <button
+          className="btn btn-outline-danger"
+          onClick={handleDeleteSelected}
+          disabled={!selectedItems.length}
+        >
+          🗑 Del Selected
+        </button>
+        <button
+          className="btn btn-danger"
+          onClick={handleDeleteAll}
+          disabled={!filteredInventory.length}
+        >
+          🧹 Delete All
+        </button>
+      </div>
     </>
   );
 };

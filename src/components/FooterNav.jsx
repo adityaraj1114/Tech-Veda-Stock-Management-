@@ -1,12 +1,17 @@
 // src/components/FooterNav.jsx
 import React from "react";
 import { NavLink } from "react-router-dom";
-import { FaShoppingCart, FaCashRegister, FaUsers, FaBoxes } from "react-icons/fa";
+import { FaShoppingCart, FaCashRegister, FaUsers, FaBoxes, FaHome } from "react-icons/fa";
 
 export default function FooterNav() {
   return (
     <>
       <div className="footer-nav d-flex justify-content-around align-items-center pt-3">
+        <NavLink to="/dashboard" className="footer-link">
+          <FaHome size={22} />
+          <span>Dashboard</span>
+        </NavLink>
+
         <NavLink to="/purchase" className="footer-link">
           <FaShoppingCart size={22} />
           <span>Buy</span>

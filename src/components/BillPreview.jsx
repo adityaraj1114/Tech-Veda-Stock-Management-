@@ -225,10 +225,10 @@ export default function BillPreview({
           <table className="table table-sm table-bordered text-center align-middle mb-2">
             <thead className="table-light" style={{ fontSize: "0.8rem" }}>
               <tr>
-                <th>#</th>
-                <th>Description</th>
+                <th>No.</th>
+                <th>Item</th>
                 <th>Qty</th>
-                <th>Selling Price</th>
+                <th>S.P</th>
                 <th>Dis %</th>
                 <th>GST</th>
                 <th>Final Total</th>
