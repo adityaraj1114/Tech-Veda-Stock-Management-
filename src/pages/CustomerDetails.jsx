@@ -395,7 +395,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         </div>
 
         {/* Transactions Table */}
-        <h3 className="mt-4 mb-3 px-3 text-white text-center mb-2">
+        <h3 className="mt-4 mb-3 px-3 text-dark text-center mb-2">
           <b>📑 Transactions</b>
         </h3>
         <div className="row g-2 mb-2">

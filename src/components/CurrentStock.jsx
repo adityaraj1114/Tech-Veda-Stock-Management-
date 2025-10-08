@@ -207,7 +207,7 @@ const CurrentStock = ({ search = "" }) => {
                   <td>{(currentPage - 1) * pageSize + i + 1}</td>
                   <td>{inv.item || "N/A"}</td>
                   <td className="text-primary">{inv.purchased || 0}</td>
-                  <td className="text-primary">{inv.sold || 0}</td>
+                  <td className="text-danger">{inv.sold || 0}</td>
                   <td
                     className={`fw-bold ${
                       inv.inStock > 0 ? "text-success" : "text-danger"

@@ -36,7 +36,6 @@ export default function CustomerForm() {
     <motion.div
       className="card shadow-lg p-4 mb-4 border-0"
       style={{
-        // background: "linear-gradient(135deg, #e0f7fa, #e3f2fd, #f3e5f5)",
                 background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
         borderRadius: "20px",
       }}

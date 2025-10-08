@@ -2,6 +2,8 @@
 import { useState, useContext } from "react";
 import { InventoryContext } from "../context/InventoryContext";
 import * as XLSX from "xlsx";
+import jsPDF from "jspdf";
+import "jspdf-autotable";
 
 export default function CustomerCatalog() {
   const { getInventory } = useContext(InventoryContext);
@@ -22,14 +24,15 @@ export default function CustomerCatalog() {
     sellingPrice: "",
   });
   const [profitPercent, setProfitPercent] = useState("");
+  const [showBuyingPrice, setShowBuyingPrice] = useState(true); // 👁️ Toggle
 
-  // ✅ Save changes to localStorage
+  // ✅ Save to localStorage
   const saveCatalog = (data) =>
     localStorage.setItem("catalogProducts", JSON.stringify(data));
   const saveHidden = (data) =>
     localStorage.setItem("hiddenProducts", JSON.stringify(data));
 
-  // Handle select stock product or "new"
+  // Select Product
   const handleSelectProduct = (value) => {
     setSelectedProduct(value);
     setProfitPercent("");
@@ -59,7 +62,7 @@ export default function CustomerCatalog() {
     }));
   };
 
-  // Add to catalog
+  // Add Product
   const handleAddProduct = () => {
     if (!formData.name || !formData.sellingPrice) {
       alert("Please enter product name and selling price.");
@@ -74,14 +77,12 @@ export default function CustomerCatalog() {
     const updated = [...catalogProducts, newItem];
     setCatalogProducts(updated);
     saveCatalog(updated);
-
-    // reset form
     setSelectedProduct("new");
     setFormData({ name: "", buyingPrice: "", sellingPrice: "" });
     setProfitPercent("");
   };
 
-  // Hide product → move to hidden list
+  // Hide / Unhide
   const handleHide = (id) => {
     const product = catalogProducts.find((p) => p.id === id);
     if (product) {
@@ -94,7 +95,6 @@ export default function CustomerCatalog() {
     }
   };
 
-  // Unhide product → move back to catalog
   const handleUnhide = (id) => {
     const product = hiddenProducts.find((p) => p.id === id);
     if (product) {
@@ -108,11 +108,31 @@ export default function CustomerCatalog() {
   };
 
   // Export Excel
-  const handleExport = () => {
+  const handleExportExcel = () => {
     const ws = XLSX.utils.json_to_sheet(catalogProducts);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Catalog");
     XLSX.writeFile(wb, "CustomerCatalog.xlsx");
+  };
+
+  // Export PDF (Only Selling Price)
+  const handleExportPDF = () => {
+    const doc = new jsPDF();
+    doc.setFontSize(14);
+    doc.text("My Shop (Product Price List)", 14, 15);
+    const tableData = catalogProducts.map((p, index) => [
+      index + 1,
+      p.name,
+      `₹${p.sellingPrice}`,
+    ]);
+
+    doc.autoTable({
+      head: [["S.No", "Product Name", "Selling Price"]],
+      body: tableData,
+      startY: 25,
+    });
+
+    doc.save("CustomerCatalog.pdf");
   };
 
   return (
@@ -142,7 +162,7 @@ export default function CustomerCatalog() {
 
           <p className="text-center pt-2">or</p>
 
-          {/* Name */}
+          {/* Product Name */}
           <div className="col-md-2">
             <label className="form-label">Product Name</label>
             <input
@@ -209,12 +229,26 @@ export default function CustomerCatalog() {
       </div>
 
       {/* ---- Catalog Table ---- */}
-      <div className="d-flex justify-content-between align-items-center mb-2">
-        <h5>Active Catalog Products</h5>
-        <button className="btn btn-success btn-sm" onClick={handleExport}>
-          ⬇ Export Excel
-        </button>
+      <div className="">
+        <div>
+                  <h3>Active Catalog Products</h3>
+        </div>
+        <div className="d-flex gap-2 justify-content-between align-items-center mt-4 mb-4">
+          <button
+            className="btn btn-outline-secondary btn-sm"
+            onClick={() => setShowBuyingPrice(!showBuyingPrice)}
+          >
+            {showBuyingPrice ? "🙈 Hide(BP)" : "👁 Show(BP)"}
+          </button>
+          <button className="btn btn-success btn-sm" onClick={handleExportExcel}>
+            ⬇ Excel
+          </button>
+          <button className="btn btn-danger btn-sm" onClick={handleExportPDF}>
+            📄 PDF
+          </button>
+        </div>
       </div>
+
       {catalogProducts.length === 0 ? (
         <p>No active catalog products.</p>
       ) : (
@@ -223,7 +257,7 @@ export default function CustomerCatalog() {
             <thead>
               <tr>
                 <th>Name</th>
-                <th>Buying Price</th>
+                {showBuyingPrice && <th>Buying Price</th>}
                 <th>Selling Price</th>
                 <th>Action</th>
               </tr>
@@ -232,7 +266,7 @@ export default function CustomerCatalog() {
               {catalogProducts.map((p) => (
                 <tr key={p.id}>
                   <td>{p.name}</td>
-                  <td>₹{p.buyingPrice}</td>
+                  {showBuyingPrice && <td>₹{p.buyingPrice}</td>}
                   <td>₹{p.sellingPrice}</td>
                   <td>
                     <button
@@ -250,7 +284,8 @@ export default function CustomerCatalog() {
       )}
 
       {/* ---- Hidden Table ---- */}
-      <h5>Hidden Products</h5>
+      <div className="mb-5 pb-5">
+        <h3>Hidden Products</h3>
       {hiddenProducts.length === 0 ? (
         <p>No hidden products.</p>
       ) : (
@@ -284,6 +319,7 @@ export default function CustomerCatalog() {
           </table>
         </div>
       )}
+      </div>
     </div>
   );
 }

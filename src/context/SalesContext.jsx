@@ -1,4 +1,3 @@
-// src/context/SalesContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { useCustomer } from "./CustomerContext";
 
@@ -17,16 +16,26 @@ export const SalesProvider = ({ children }) => {
 
   const { updateCustomerLedger } = useCustomer();
 
+  // ✅ Format date as DD/MM/YYYY HH:mm:ss
+  const formatDate = (d) => {
+    const day = String(d.getDate()).padStart(2, "0");
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, "0");
+    const minutes = String(d.getMinutes()).padStart(2, "0");
+    const seconds = String(d.getSeconds()).padStart(2, "0");
+    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+  };
+
   // -------------------- Add Sale --------------------
   const addSale = (saleData) => {
     if (!saleData || !saleData.items || saleData.items.length === 0) return;
 
-    // Function to calculate row totals
     const calculateRow = (it) => {
       const qty = Number(it.qty ?? it.quantity) || 0;
       const sellingPrice = Number(it.sellingPrice ?? it.unitPrice ?? it.price) || 0;
-      const discount = Number(it.discount) || 0; // %
-      const gst = Number(it.gst) || 0; // %
+      const discount = Number(it.discount) || 0;
+      const gst = Number(it.gst) || 0;
 
       const netPrice = qty * sellingPrice;
       const discountAmt = (discount / 100) * netPrice;
@@ -46,7 +55,6 @@ export const SalesProvider = ({ children }) => {
       };
     };
 
-    // Calculate total sale amount for proportional paid distribution
     const totalSaleAmount = saleData.items.reduce(
       (sum, it) => sum + calculateRow(it).finalTotal,
       0
@@ -66,41 +74,45 @@ export const SalesProvider = ({ children }) => {
         finalTotal,
       } = calculateRow(it);
 
-      // proportional paid allocation
       const itemPaid =
         totalSaleAmount > 0 ? (finalTotal / totalSaleAmount) * paid : 0;
 
       return {
         id: Date.now() + Math.random(),
-        customer: saleData.customer?.trim() || "Unknown",
+        customer:
+          saleData.customer?.trim() ||
+          saleData.customerInfo?.name?.trim() ||
+          "Unknown",
         customerInfo: { ...saleData.customerInfo },
         product: it.product?.trim() || "Unnamed",
         quantity: qty,
         sellingPrice,
-        discount, // ✅ saved
-        gst, // ✅ saved
+        discount,
+        gst,
         netPrice,
         discountAmt,
         gstAmt,
         total: finalTotal,
         paid: parseFloat(itemPaid.toFixed(2)),
         pending: parseFloat((finalTotal - itemPaid).toFixed(2)),
-        date: saleData.date || new Date().toISOString(),
+        date: saleData.date || formatDate(new Date()),
       };
     });
 
-    // Add new sales entries (recent first)
+    // ✅ Add new sales entries (latest first)
     setSales((prev) => [...entries, ...prev]);
 
-    // Update customer ledger
-    updateCustomerLedger(saleData.customer, paid);
+    // ✅ Update customer ledger
+    updateCustomerLedger(
+      saleData.customer?.trim() || saleData.customerInfo?.name?.trim() || "Unknown",
+      paid
+    );
   };
 
   // -------------------- Update Sale Payment --------------------
   const updateSalePayment = (updatedSales) => {
     setSales(updatedSales);
 
-    // Update customer ledger based on paid amounts
     const ledgerMap = {};
     updatedSales.forEach((s) => {
       if (!ledgerMap[s.customer]) ledgerMap[s.customer] = 0;
