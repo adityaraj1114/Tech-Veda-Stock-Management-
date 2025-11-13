@@ -1,40 +1,84 @@
 // src/context/ProfileContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-const ProfileContext = createContext({
-  profile: { gstPercent: 0 }, // ✅ always include gstPercent
+// ----------------------------------------------------
+// Exported named context so other modules can import { ProfileContext }
+// ----------------------------------------------------
+export const ProfileContext = createContext({
+  profile: {
+    shopName: "",
+    ownerName: "",
+    address: "",
+    phone: "",
+    gstNumber: "",
+    gstPercent: 0, // always present
+  },
   updateProfile: () => {},
 });
 
-// Safely parse from localStorage
+// ----------------------------------------------------
+// Helper: safely parse from localStorage
+// ----------------------------------------------------
 const safeParse = (key) => {
   try {
     const raw = localStorage.getItem(key);
     const data = raw ? JSON.parse(raw) : {};
-    if (typeof data !== "object" || data === null) return { gstPercent: 0 };
+
+    if (typeof data !== "object" || data === null) {
+      return {
+        shopName: "",
+        ownerName: "",
+        address: "",
+        phone: "",
+        gstNumber: "",
+        gstPercent: 0,
+      };
+    }
 
     return {
-      ...data,
-      gstPercent: parseFloat(data.gstPercent) || 0, // ✅ normalize gstPercent
+      shopName: data.shopName || "",
+      ownerName: data.ownerName || "",
+      address: data.address || "",
+      phone: data.phone || "",
+      gstNumber: data.gstNumber || "",
+      gstPercent: parseFloat(data.gstPercent) || 0,
     };
   } catch {
-    return { gstPercent: 0 };
+    return {
+      shopName: "",
+      ownerName: "",
+      address: "",
+      phone: "",
+      gstNumber: "",
+      gstPercent: 0,
+    };
   }
 };
 
+// ----------------------------------------------------
+// Provider Component (named export)
+ // ----------------------------------------------------
 export function ProfileProvider({ children }) {
   const [profile, setProfile] = useState(() => safeParse("profile"));
 
-  // Persist profile in localStorage
+  // Persist to localStorage
   useEffect(() => {
-    localStorage.setItem("profile", JSON.stringify(profile));
+    try {
+      localStorage.setItem("profile", JSON.stringify(profile));
+    } catch (err) {
+      console.error("Error saving profile to localStorage:", err);
+    }
   }, [profile]);
 
+  // Update profile with automatic gst normalization
   const updateProfile = (newData) => {
     const updated = {
-      ...profile, // ✅ preserve old fields
+      ...profile,
       ...newData,
-      gstPercent: parseFloat(newData.gstPercent) || 0,
+      gstPercent:
+        newData.gstPercent !== undefined
+          ? parseFloat(newData.gstPercent) || 0
+          : profile.gstPercent,
     };
     setProfile(updated);
   };
@@ -46,4 +90,7 @@ export function ProfileProvider({ children }) {
   );
 }
 
+// ----------------------------------------------------
+// Hook to consume profile context
+// ----------------------------------------------------
 export const useProfile = () => useContext(ProfileContext);

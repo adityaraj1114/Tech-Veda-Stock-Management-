@@ -50,6 +50,14 @@ export default function CustomerCatalog() {
     }
   };
 
+  const handleDelete = (id) => {
+  if (window.confirm("Delete this product permanently?")) {
+    setHiddenProducts((prev) => prev.filter((p) => p.id !== id));
+    // Optional: localStorage update or backend call
+  }
+};
+
+
   // Profit % → auto calculate SP
   const handleProfitChange = (val) => {
     setProfitPercent(val);
@@ -138,7 +146,6 @@ export default function CustomerCatalog() {
   return (
     <div className="container mt-4 mb-5">
       <h2 className="mb-3">📦 Customer Catalog</h2>
-
       {/* ---- Form Section ---- */}
       <div className="card p-3 shadow-sm mb-4">
         <h5>Add / Update Catalog Product</h5>
@@ -221,17 +228,19 @@ export default function CustomerCatalog() {
 
           {/* Add Btn */}
           <div className="col-md-1">
-            <button className="btn btn-primary w-100" onClick={handleAddProduct}>
+            <button
+              className="btn btn-primary w-100"
+              onClick={handleAddProduct}
+            >
               Add
             </button>
           </div>
         </div>
       </div>
-
       {/* ---- Catalog Table ---- */}
       <div className="">
         <div>
-                  <h3>Active Catalog Products</h3>
+          <h3>Active Catalog Products</h3>
         </div>
         <div className="d-flex gap-2 justify-content-between align-items-center mt-4 mb-4">
           <button
@@ -240,7 +249,10 @@ export default function CustomerCatalog() {
           >
             {showBuyingPrice ? "🙈 Hide(BP)" : "👁 Show(BP)"}
           </button>
-          <button className="btn btn-success btn-sm" onClick={handleExportExcel}>
+          <button
+            className="btn btn-success btn-sm"
+            onClick={handleExportExcel}
+          >
             ⬇ Excel
           </button>
           <button className="btn btn-danger btn-sm" onClick={handleExportPDF}>
@@ -248,7 +260,6 @@ export default function CustomerCatalog() {
           </button>
         </div>
       </div>
-
       {catalogProducts.length === 0 ? (
         <p>No active catalog products.</p>
       ) : (
@@ -282,43 +293,51 @@ export default function CustomerCatalog() {
           </table>
         </div>
       )}
-
+      ---- Hidden Table ----
       {/* ---- Hidden Table ---- */}
       <div className="mb-5 pb-5">
         <h3>Hidden Products</h3>
-      {hiddenProducts.length === 0 ? (
-        <p>No hidden products.</p>
-      ) : (
-        <div className="table-responsive">
-          <table className="table table-bordered table-striped">
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Buying Price</th>
-                <th>Selling Price</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {hiddenProducts.map((p) => (
-                <tr key={p.id}>
-                  <td>{p.name}</td>
-                  <td>₹{p.buyingPrice}</td>
-                  <td>₹{p.sellingPrice}</td>
-                  <td>
-                    <button
-                      className="btn btn-sm btn-warning"
-                      onClick={() => handleUnhide(p.id)}
-                    >
-                      Unhide
-                    </button>
-                  </td>
+        {hiddenProducts.length === 0 ? (
+          <p>No hidden products.</p>
+        ) : (
+          <div className="table-responsive">
+            <table className="table table-bordered table-striped">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Buying Price</th>
+                  <th>Selling Price</th>
+                  <th>Action</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+              </thead>
+              <tbody>
+                {hiddenProducts.map((p) => (
+                  <tr key={p.id}>
+                    <td>{p.name}</td>
+                    <td>₹{p.buyingPrice}</td>
+                    <td>₹{p.sellingPrice}</td>
+                    <td>
+                      <div className="d-flex gap-2 justify-content-center">
+                        <button
+                          className="btn btn-sm btn-warning"
+                          onClick={() => handleUnhide(p.id)}
+                        >
+                          Unhide
+                        </button>
+                        <button
+                          className="btn btn-sm btn-danger"
+                          onClick={() => handleDelete(p.id)}
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

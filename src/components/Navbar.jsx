@@ -74,6 +74,7 @@ const Navbar = () => {
     { name: "Profile", path: "/profile", auth: true },
     { name: "Sign Up", path: "/signup", auth: false },
     { name: "Customer Catalog", path: "/customerCatalog", auth: false },
+    { name: "RetailSellPage", path: "/retailSellPage", auth: false },
   ];
 
   return (

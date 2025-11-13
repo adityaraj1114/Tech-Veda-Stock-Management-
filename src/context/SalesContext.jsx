@@ -4,17 +4,20 @@ import { useCustomer } from "./CustomerContext";
 export const SalesContext = createContext();
 
 export const SalesProvider = ({ children }) => {
+  const { updateCustomerLedger } = useCustomer();
+
+  // -------------------- Load Sales --------------------
   const [sales, setSales] = useState(() => {
     try {
       const raw = localStorage.getItem("sales");
       const data = raw ? JSON.parse(raw) : [];
-      return Array.isArray(data) ? data : [];
+      return Array.isArray(data)
+        ? data.sort((a, b) => new Date(b.date) - new Date(a.date)) // ✅ Sort latest first
+        : [];
     } catch {
       return [];
     }
   });
-
-  const { updateCustomerLedger } = useCustomer();
 
   // ✅ Format date as DD/MM/YYYY HH:mm:ss
   const formatDate = (d) => {
@@ -111,10 +114,14 @@ export const SalesProvider = ({ children }) => {
 
   // -------------------- Update Sale Payment --------------------
   const updateSalePayment = (updatedSales) => {
-    setSales(updatedSales);
+    // ✅ Keep latest transactions on top
+    const sorted = [...updatedSales].sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
+    setSales(sorted);
 
     const ledgerMap = {};
-    updatedSales.forEach((s) => {
+    sorted.forEach((s) => {
       if (!ledgerMap[s.customer]) ledgerMap[s.customer] = 0;
       ledgerMap[s.customer] += s.paid;
     });
@@ -126,7 +133,8 @@ export const SalesProvider = ({ children }) => {
 
   // -------------------- Persist to localStorage --------------------
   useEffect(() => {
-    localStorage.setItem("sales", JSON.stringify(sales));
+    const sorted = [...sales].sort((a, b) => new Date(b.date) - new Date(a.date));
+    localStorage.setItem("sales", JSON.stringify(sorted));
   }, [sales]);
 
   return (
@@ -136,4 +144,5 @@ export const SalesProvider = ({ children }) => {
   );
 };
 
+// -------------------- Hook --------------------
 export const useSales = () => useContext(SalesContext);

@@ -1,10 +1,9 @@
-// src/context/InventoryContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const InventoryContext = createContext();
 
 export const InventoryProvider = ({ children }) => {
-  // -------------------- States --------------------
+  // -------------------- STATES --------------------
   const [purchases, setPurchases] = useState(() => {
     try {
       const raw = localStorage.getItem("purchases");
@@ -32,7 +31,42 @@ export const InventoryProvider = ({ children }) => {
     }
   });
 
-  // -------------------- Add Sale --------------------
+  const [products, setProducts] = useState(() => {
+    try {
+      const raw = localStorage.getItem("products");
+      return raw ? JSON.parse(raw) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // -------------------- ADD / UPDATE PRODUCT --------------------
+  const addOrUpdateProduct = (product) => {
+    // product = { id?, name, buyingPrice, sellingPrice, stock, image }
+    setProducts((prev) => {
+      const existingIndex = prev.findIndex(
+        (p) => p.name.trim().toLowerCase() === product.name.trim().toLowerCase()
+      );
+      if (existingIndex !== -1) {
+        // update existing
+        const updated = [...prev];
+        updated[existingIndex] = { ...updated[existingIndex], ...product };
+        return updated;
+      } else {
+        // add new
+        return [...prev, { id: Date.now().toString(), ...product }];
+      }
+    });
+  };
+
+  // -------------------- DELETE PRODUCT --------------------
+  const deleteProduct = (productId) => {
+    if (window.confirm("Delete this product permanently?")) {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+    }
+  };
+
+  // -------------------- ADD SALE --------------------
   const addSale = (customer, contactPhone, items, paidAmount = 0) => {
     const totalAmount = items.reduce((sum, it) => sum + it.total, 0);
 
@@ -47,6 +81,16 @@ export const InventoryProvider = ({ children }) => {
     };
 
     setSales((prev) => [...prev, newSale]);
+
+    // ✅ Update stock after sale
+    setProducts((prev) =>
+      prev.map((p) => {
+        const soldItem = items.find((i) => i.product === p.name);
+        if (!soldItem) return p;
+        const newStock = Math.max((p.stock || 0) - soldItem.quantity, 0);
+        return { ...p, stock: newStock };
+      })
+    );
 
     // ✅ Update customer record too
     setCustomers((prev) => {
@@ -84,7 +128,7 @@ export const InventoryProvider = ({ children }) => {
     });
   };
 
-  // -------------------- Record Payment --------------------
+  // -------------------- RECORD PAYMENT --------------------
   const recordPayment = (customerId, amount) => {
     setCustomers((prev) =>
       prev.map((c) =>
@@ -99,7 +143,7 @@ export const InventoryProvider = ({ children }) => {
     );
   };
 
-  // -------------------- Delete Stock Item --------------------
+  // -------------------- DELETE STOCK ITEM --------------------
   const deleteStockItem = (itemName) => {
     if (
       window.confirm(`Delete all purchase & sale records for "${itemName}"?`)
@@ -119,96 +163,98 @@ export const InventoryProvider = ({ children }) => {
           items: (s.items || []).filter((it) => it.product !== itemName),
         }))
       );
+
+      setProducts((prev) => prev.filter((p) => p.name !== itemName));
     }
   };
 
-  // -------------------- Reset All Data --------------------
+  // -------------------- RESET ALL DATA --------------------
   const resetData = () => {
     if (window.confirm("This will permanently delete ALL data. Continue?")) {
       setSales([]);
       setPurchases([]);
       setCustomers([]);
+      setProducts([]);
       localStorage.removeItem("sales");
       localStorage.removeItem("purchases");
       localStorage.removeItem("customers");
+      localStorage.removeItem("products");
     }
   };
 
-  // -------------------- Get Inventory --------------------
+  // -------------------- GET INVENTORY --------------------
   const getInventory = () => {
-  const stockMap = {};
+    const stockMap = {};
 
-  // Purchases → Buying Price + Selling Price
-  purchases.forEach((p) => {
-    (p.items || []).forEach((it) => {
-      if (!stockMap[it.item]) {
-        stockMap[it.item] = {
-          purchased: 0,
-          sold: 0,
-          costSum: 0, // buying price × qty
-          sellingPrice: 0, // last entered selling price
-        };
-      }
-      const qty = Number(it.quantity) || 0;
-      const buyingPrice = Number(it.buyingPrice) || 0;
-      const sellingPrice = Number(it.sellingPrice) || 0;
+    // Purchases
+    purchases.forEach((p) => {
+      (p.items || []).forEach((it) => {
+        if (!stockMap[it.item]) {
+          stockMap[it.item] = {
+            purchased: 0,
+            sold: 0,
+            costSum: 0,
+            sellingPrice: 0,
+          };
+        }
+        const qty = Number(it.quantity) || 0;
+        const buyingPrice = Number(it.buyingPrice) || 0;
+        const sellingPrice = Number(it.sellingPrice) || 0;
 
-      stockMap[it.item].purchased += qty;
-      stockMap[it.item].costSum += buyingPrice * qty;
-      // always update selling price with the latest one
-      if (sellingPrice > 0) stockMap[it.item].sellingPrice = sellingPrice;
+        stockMap[it.item].purchased += qty;
+        stockMap[it.item].costSum += buyingPrice * qty;
+        if (sellingPrice > 0) stockMap[it.item].sellingPrice = sellingPrice;
+      });
     });
-  });
 
-  // Sales → update sold quantity
-  sales.forEach((s) => {
-    (s.items || []).forEach((it) => {
-      if (!stockMap[it.product]) {
-        stockMap[it.product] = {
-          purchased: 0,
-          sold: 0,
-          costSum: 0,
-          sellingPrice: 0,
-        };
-      }
-      stockMap[it.product].sold += Number(it.quantity) || 0;
+    // Sales
+    sales.forEach((s) => {
+      (s.items || []).forEach((it) => {
+        if (!stockMap[it.product]) {
+          stockMap[it.product] = {
+            purchased: 0,
+            sold: 0,
+            costSum: 0,
+            sellingPrice: 0,
+          };
+        }
+        stockMap[it.product].sold += Number(it.quantity) || 0;
+      });
     });
-  });
 
-  // Map to inventory array
-  return Object.entries(stockMap).map(([item, data]) => {
-    const buyingPrice = data.purchased > 0 ? data.costSum / data.purchased : 0;
-    const inStock = data.purchased - data.sold;
-    const totalValue = buyingPrice * inStock; // based on buying price
+    return Object.entries(stockMap).map(([item, data]) => {
+      const buyingPrice = data.purchased > 0 ? data.costSum / data.purchased : 0;
+      const inStock = data.purchased - data.sold;
+      const totalValue = buyingPrice * inStock;
 
-    return {
-      item,
-      purchased: data.purchased,
-      sold: data.sold,
-      buyingPrice,
-      sellingPrice: data.sellingPrice, // ✅ show last set selling price
-      inStock,
-      totalValue,
-    };
-  });
-};
+      const productData = products.find((p) => p.name === item);
+      const image = productData?.image || "";
 
+      return {
+        item,
+        purchased: data.purchased,
+        sold: data.sold,
+        buyingPrice,
+        sellingPrice: data.sellingPrice || productData?.sellingPrice || 0,
+        inStock,
+        totalValue,
+        image,
+      };
+    });
+  };
 
-  // -------------------- Profit/Loss --------------------
+  // -------------------- PROFIT / LOSS --------------------
   const getProfitLoss = () => {
     const totalPurchase = purchases.reduce(
       (sum, p) => sum + (p.totalCost || 0),
       0
     );
-    const totalSales = sales.reduce(
-      (sum, s) => sum + (s.totalAmount || 0),
-      0
-    );
+    const totalSales = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
 
     return { totalPurchase, totalSales, profit: totalSales - totalPurchase };
   };
 
-  // -------------------- Transactions --------------------
+  // -------------------- TRANSACTIONS --------------------
   const getTransactions = () => {
     const combined = [
       ...purchases.flatMap((p) =>
@@ -232,7 +278,7 @@ export const InventoryProvider = ({ children }) => {
     return combined.sort((a, b) => b.date.localeCompare(a.date));
   };
 
-  // -------------------- Persist --------------------
+  // -------------------- PERSIST DATA --------------------
   useEffect(() => {
     localStorage.setItem("purchases", JSON.stringify(purchases));
   }, [purchases]);
@@ -245,15 +291,22 @@ export const InventoryProvider = ({ children }) => {
     localStorage.setItem("customers", JSON.stringify(customers));
   }, [customers]);
 
+  useEffect(() => {
+    localStorage.setItem("products", JSON.stringify(products));
+  }, [products]);
+
+  // -------------------- EXPORT CONTEXT --------------------
   return (
     <InventoryContext.Provider
       value={{
         purchases,
         sales,
         customers,
+        products,
         setPurchases,
         setSales,
         setCustomers,
+        setProducts,
         getInventory,
         getProfitLoss,
         getTransactions,
@@ -261,6 +314,8 @@ export const InventoryProvider = ({ children }) => {
         resetData,
         addSale,
         recordPayment,
+        addOrUpdateProduct,
+        deleteProduct,
       }}
     >
       {children}

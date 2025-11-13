@@ -27,6 +27,7 @@ import { SalesProvider, useSales } from "./context/SalesContext";
 import { PurchaseProvider, usePurchase } from "./context/PurchaseContext";
 import { InventoryProvider } from "./context/InventoryContext";
 import { CustomerCatalogProvider } from "./context/CustomerCatalogContext";
+import RetailSellPage from "./pages/RetailSellPage";
 
 // ✅ Wrapper to pass sales & purchases into InventoryProvider
 function AppProviders({ children }) {
@@ -70,6 +71,7 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
+
 
       <Route
         path="/stock"
@@ -121,6 +123,15 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Sale />
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/retailSellPage"
+        element={
+          <PrivateRoute>
+            <RetailSellPage />
           </PrivateRoute>
         }
       />

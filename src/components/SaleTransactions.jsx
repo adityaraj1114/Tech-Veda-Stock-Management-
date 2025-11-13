@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 
-export default function SaleTransactions({ transactions, onView, onDelete }) {
+export default function SaleTransactions({ transactions = [], onView, onDelete }) {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -13,248 +13,196 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
   const [filterMonth, setFilterMonth] = useState("");
   const pageSize = 20;
 
+  // ✅ Date parser (handles DD-MM-YYYY, YYYY-MM-DD etc.)
   const parseDate = (dateStr) => {
     if (!dateStr) return null;
-    const parts = dateStr.split("/");
-    if (parts.length === 3) {
-      const [day, month, year] = parts.map(Number);
-      return new Date(year, month - 1, day);
+    let d = new Date(dateStr);
+    if (isNaN(d)) {
+      const parts = dateStr.split(/[\/\-]/).map(Number);
+      if (parts.length === 3) {
+        const [day, month, year] = parts[0] > 12 ? parts : [parts[2], parts[1], parts[0]];
+        d = new Date(year, month - 1, day);
+      }
     }
-    return new Date(dateStr);
+    return isNaN(d) ? null : d;
   };
 
   const formatDate = (dateStr) => {
     const d = parseDate(dateStr);
-    if (!d || isNaN(d)) return dateStr || "-";
-    const day = String(d.getDate()).padStart(2, "0");
-    const month = String(d.getMonth() + 1).padStart(2, "0");
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, "0");
-    const minutes = String(d.getMinutes()).padStart(2, "0");
-    const seconds = String(d.getSeconds()).padStart(2, "0");
-    return `${day}/${month}/${year} ${hours}:${minutes}:${seconds}`;
+    if (!d) return dateStr || "-";
+    return d.toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
+  // ✅ Month dropdown options
+  const monthOptions = useMemo(() => {
+    const set = new Set();
+    transactions.forEach((tx) => {
+      const d = parseDate(tx.date);
+      if (d)
+        set.add(`${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`);
+    });
+    return Array.from(set).sort((a, b) => {
+      const [am, ay] = a.split("-").map(Number);
+      const [bm, by] = b.split("-").map(Number);
+      return new Date(by, bm - 1) - new Date(ay, am - 1);
+    });
+  }, [transactions]);
+
+  // ✅ Filtering + Sorting (Latest first)
   const filtered = useMemo(() => {
     const rawSearch = search.toLowerCase();
     const numericSearch = search.replace(/\D/g, "");
 
-    return (
-      (transactions || [])
-        .filter((tx) => {
-          const customerName = String(tx.customer ?? "").toLowerCase();
-          const customerPhone = (tx.customerInfo?.contactPhone || "").replace(
-            /\D/g,
-            ""
+    return (transactions || [])
+      .filter((tx) => {
+        const customerName = String(tx.customer ?? "").toLowerCase();
+        const customerPhone = (tx.customerInfo?.contactPhone || "").replace(/\D/g, "");
+        const matchesText =
+          !rawSearch ||
+          customerName.includes(rawSearch) ||
+          (numericSearch && customerPhone.includes(numericSearch)) ||
+          tx.items?.some((it) =>
+            String(it.product ?? "").toLowerCase().includes(rawSearch)
           );
-          const matchesText =
-            rawSearch === "" ||
-            customerName.includes(rawSearch) ||
-            (numericSearch && customerPhone.includes(numericSearch)) ||
-            tx.items?.some((it) =>
-              String(it.product ?? "")
-                .toLowerCase()
-                .includes(rawSearch)
-            );
 
-          const txDate = parseDate(tx.date);
-          const matchesStart =
-            !startDate ||
-            (txDate && txDate >= new Date(startDate + "T00:00:00"));
-          const matchesEnd =
-            !endDate || (txDate && txDate <= new Date(endDate + "T23:59:59"));
+        const txDate = parseDate(tx.date);
+        const matchesStart = !startDate || (txDate && txDate >= new Date(startDate));
+        const matchesEnd = !endDate || (txDate && txDate <= new Date(endDate));
 
-          const monthKey = txDate
-            ? `${String(txDate.getMonth() + 1).padStart(
-                2,
-                "0"
-              )}-${txDate.getFullYear()}`
-            : "";
-          const matchesMonth = !filterMonth || monthKey === filterMonth;
+        const monthKey = txDate
+          ? `${String(txDate.getMonth() + 1).padStart(2, "0")}-${txDate.getFullYear()}`
+          : "";
 
-          return matchesText && matchesStart && matchesEnd && matchesMonth;
-        })
-        // Sort by date descending (latest first)
-        .sort((a, b) => parseDate(b.date) - parseDate(a.date))
-    );
+        const matchesMonth = !filterMonth || monthKey === filterMonth;
+
+        return matchesText && matchesStart && matchesEnd && matchesMonth;
+      })
+      .sort((a, b) => {
+        const da = parseDate(a.date);
+        const db = parseDate(b.date);
+        return db - da; // 🔥 ensures newest first
+      });
   }, [transactions, search, startDate, endDate, filterMonth]);
 
-  const totalPages = Math.ceil(filtered.length / pageSize);
+  // ✅ Pagination (after sorting)
+  const totalPages = Math.ceil(filtered.length / pageSize) || 1;
   const paginated = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
     return filtered.slice(start, start + pageSize);
   }, [filtered, currentPage]);
 
-  const totalSale = filtered.reduce(
-    (sum, tx) => sum + (parseFloat(tx.total) || 0),
-    0
-  );
-  const totalPaid = filtered.reduce(
-    (sum, tx) => sum + (parseFloat(tx.paid) || 0),
-    0
-  );
+  // ✅ Totals
+  const totalSale = filtered.reduce((sum, tx) => sum + (parseFloat(tx.total) || 0), 0);
+  const totalPaid = filtered.reduce((sum, tx) => sum + (parseFloat(tx.paid) || 0), 0);
   const totalPending = filtered.reduce(
     (sum, tx) => sum + (parseFloat(tx.pending) || 0),
     0
   );
 
-  // const monthWiseTotals = useMemo(() => {
-  //   const map = {};
-  //   filtered.forEach((tx) => {
-  //     const d = parseDate(tx.date);
-  //     if (!d) return;
-  //     const key = `${String(d.getMonth() + 1).padStart(
-  //       2,
-  //       "0"
-  //     )}-${d.getFullYear()}`;
-  //     if (!map[key]) map[key] = { total: 0, paid: 0, pending: 0, count: 0 };
-  //     map[key].total += parseFloat(tx.total ?? 0);
-  //     map[key].paid += parseFloat(tx.paid ?? 0);
-  //     map[key].pending += parseFloat(tx.pending ?? 0);
-  //     map[key].count += 1;
-  //   });
-
-  //   // Sort keys by actual date
-  //   const sortedEntries = Object.entries(map).sort(([a], [b]) => {
-  //     const [am, ay] = a.split("-").map(Number);
-  //     const [bm, by] = b.split("-").map(Number);
-  //     return new Date(by, bm - 1) - new Date(ay, am - 1); // latest first
-  //   });
-
-  //   return Object.fromEntries(sortedEntries);
-  // }, [filtered]);
-
+  // ✅ Month-wise totals
   const monthWiseTotals = useMemo(() => {
-  const parseDMY = (str) => {
-    if (!str) return null;
-    const parts = str.split(/[\/\-]/); // handles both / and -
-    if (parts.length === 3) {
-      const [day, month, year] = parts.map(Number);
-      return new Date(year, month - 1, day);
-    }
-    const d = new Date(str);
-    return isNaN(d) ? null : d;
-  };
+    const map = {};
+    transactions.forEach((tx) => {
+      const d = parseDate(tx.date);
+      if (!d) return;
+      const key = `${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
+      if (!map[key]) map[key] = { total: 0, paid: 0, pending: 0, count: 0 };
+      map[key].total += parseFloat(tx.total ?? 0);
+      map[key].paid += parseFloat(tx.paid ?? 0);
+      map[key].pending += parseFloat(tx.pending ?? 0);
+      map[key].count += 1;
+    });
+    return Object.fromEntries(
+      Object.entries(map).sort((a, b) => {
+        const [am, ay] = a[0].split("-").map(Number);
+        const [bm, by] = b[0].split("-").map(Number);
+        return new Date(by, bm - 1) - new Date(ay, am - 1);
+      })
+    );
+  }, [transactions]);
 
-  const map = {};
-  (transactions || []).forEach((tx) => {
-    const d = parseDMY(tx.date);
-    if (!d) return;
-
-    const key = `${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`;
-
-    if (!map[key]) map[key] = { total: 0, paid: 0, pending: 0, count: 0 };
-
-    map[key].total += parseFloat(tx.total ?? 0);
-    map[key].paid += parseFloat(tx.paid ?? 0);
-    map[key].pending += parseFloat(tx.pending ?? 0);
-    map[key].count += 1;
-  });
-
-  // Sort by most recent month first
-  return Object.fromEntries(
-    Object.entries(map).sort((a, b) => {
-      const [am, ay] = a[0].split("-").map(Number);
-      const [bm, by] = b[0].split("-").map(Number);
-      return new Date(by, bm - 1) - new Date(ay, am - 1);
-    })
-  );
-}, [transactions]);
-
-
-
+  // ✅ Export CSV
   const exportCSV = () => {
-    if (!filtered.length) return;
+    if (!filtered.length) return alert("No transactions to export.");
     const data = filtered.map((tx) => ({
       Date: formatDate(tx.date),
       Customer: tx.customer,
       Mobile: tx.customerInfo?.contactPhone || "—",
-      "Total (₹)": parseFloat(tx.total ?? 0).toFixed(2),
-      "Paid (₹)": parseFloat(tx.paid ?? 0).toFixed(2),
-      "Pending (₹)": parseFloat(tx.pending ?? 0).toFixed(2),
-      Items: tx.items?.map((it) => `${it.product} (${it.quantity})`).join(", "),
+      "Total (₹)": tx.total,
+      "Paid (₹)": tx.paid,
+      "Pending (₹)": tx.pending,
+      Items: tx.items
+        ?.map((it) => `${it.product} (${it.quantity})`)
+        .join(", ") || "—",
     }));
     const csv = Papa.unparse(data);
-    saveAs(
-      new Blob([csv], { type: "text/csv;charset=utf-8;" }),
-      `transactions_${Date.now()}.csv`
-    );
+    saveAs(new Blob([csv], { type: "text/csv;charset=utf-8;" }), "sales.csv");
   };
 
+  // ✅ Export Excel
   const exportExcel = () => {
-    if (!filtered.length) return;
-    const data = filtered.map((tx) => ({
-      Date: formatDate(tx.date),
-      Customer: tx.customer,
-      Mobile: tx.customerInfo?.contactPhone || "—",
-      "Total (₹)": parseFloat(tx.total ?? 0).toFixed(2),
-      "Paid (₹)": parseFloat(tx.paid ?? 0).toFixed(2),
-      "Pending (₹)": parseFloat(tx.pending ?? 0).toFixed(2),
-      Items: tx.items?.map((it) => `${it.product} (${it.quantity})`).join(", "),
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(data);
+    if (!filtered.length) return alert("No transactions to export.");
+    const worksheet = XLSX.utils.json_to_sheet(
+      filtered.map((tx) => ({
+        Date: formatDate(tx.date),
+        Customer: tx.customer,
+        Mobile: tx.customerInfo?.contactPhone || "—",
+        Total: tx.total,
+        Paid: tx.paid,
+        Pending: tx.pending,
+      }))
+    );
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
-    const excelBuffer = XLSX.write(workbook, {
-      bookType: "xlsx",
-      type: "array",
-    });
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Sales");
+    const excelBuffer = XLSX.write(workbook, { bookType: "xlsx", type: "array" });
     saveAs(
       new Blob([excelBuffer], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
       }),
-      `transactions_${Date.now()}.xlsx`
+      "sales.xlsx"
     );
   };
 
-  const toggleSelect = (id) => {
+  // ✅ Selection logic
+  const toggleSelect = (id) =>
     setSelectedIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
     );
-  };
+
   const selectAllOnPage = () => {
-    const idsOnPage = paginated.map((tx) => tx.id);
-    const allSelected = idsOnPage.every((id) => selectedIds.includes(id));
+    const ids = paginated.map((tx) => tx.id);
+    const allSelected = ids.every((id) => selectedIds.includes(id));
     setSelectedIds((prev) =>
-      allSelected
-        ? prev.filter((id) => !idsOnPage.includes(id))
-        : [...prev, ...idsOnPage]
+      allSelected ? prev.filter((id) => !ids.includes(id)) : [...prev, ...ids]
     );
   };
+
   const handleDeleteSelected = () => {
     if (!selectedIds.length) return alert("No transactions selected.");
-    if (!window.confirm("Delete selected transactions?")) return;
-    selectedIds.forEach((id) => onDelete(id));
-    setSelectedIds([]);
+    if (window.confirm("Delete selected transactions?")) {
+      selectedIds.forEach((id) => onDelete(id));
+      setSelectedIds([]);
+    }
   };
+
   const handleDeleteAll = () => {
-    if (!filtered.length) return;
-    if (!window.confirm("Delete all filtered transactions?")) return;
-    filtered.forEach((tx) => onDelete(tx.id));
-    setSelectedIds([]);
+    if (!filtered.length) return alert("No transactions to delete.");
+    if (window.confirm("Delete all filtered transactions?")) {
+      filtered.forEach((tx) => onDelete(tx.id));
+      setSelectedIds([]);
+    }
   };
-
-  const monthOptions = useMemo(() => {
-    const set = new Set();
-    (transactions || []).forEach((tx) => {
-      const d = parseDate(tx.date);
-      if (!d) return;
-      set.add(
-        `${String(d.getMonth() + 1).padStart(2, "0")}-${d.getFullYear()}`
-      );
-    });
-
-    return Array.from(set).sort((a, b) => {
-      const [am, ay] = a.split("-").map(Number);
-      const [bm, by] = b.split("-").map(Number);
-      return new Date(by, bm - 1) - new Date(ay, am - 1); // latest first
-    });
-  }, [transactions]);
 
   return (
     <>
-      {/* Search + Filters */}
-      <div className="row g-2 mb-3 mt-5 text-center">
+      {/* Filters Header */}
+      <div className="row g-2 mb-3 mt-4 text-center">
         <div
           className="col-md"
           style={{
@@ -263,7 +211,7 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
             WebkitTextFillColor: "transparent",
           }}
         >
-          <h1>📄 Sales Transactions</h1>
+          <h2>📄 Sales Transactions</h2>
         </div>
 
         <div className="col-md">
@@ -283,19 +231,13 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
             type="date"
             className="form-control"
             value={startDate}
-            onChange={(e) => {
-              setStartDate(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setStartDate(e.target.value)}
           />
           <input
             type="date"
             className="form-control"
             value={endDate}
-            onChange={(e) => {
-              setEndDate(e.target.value);
-              setCurrentPage(1);
-            }}
+            onChange={(e) => setEndDate(e.target.value)}
           />
         </div>
 
@@ -315,15 +257,16 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
               </option>
             ))}
           </select>
+
           <button
-            className="btn btn-outline-success w-100"
+            className="btn btn-outline-success"
             onClick={exportCSV}
             disabled={!filtered.length}
           >
             📥 CSV
           </button>
           <button
-            className="btn btn-outline-primary w-100"
+            className="btn btn-outline-primary"
             onClick={exportExcel}
             disabled={!filtered.length}
           >
@@ -332,115 +275,104 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
         </div>
       </div>
 
-      {/* Transactions Table */}
+      {/* Table */}
       <div
-        className="table-responsive mb-2 p-2 pt-4 pb-4 rounded fw-semibold text-center"
-        style={{
-          background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)",
-        }}
+        className="table-responsive mb-2 p-3 rounded fw-semibold text-center"
+        style={{ background: "linear-gradient(135deg, #0d6efd 0%, #e145f3 100%)" }}
       >
-        <div className="table-responsive rounded">
-          <table className="table table-bordered table-hover align-middle">
-            <thead className="table-secondary">
-              <tr>
-                <th>
-                  <input
-                    type="checkbox"
-                    onChange={selectAllOnPage}
-                    checked={
-                      paginated.length > 0 &&
-                      paginated.every((tx) => selectedIds.includes(tx.id))
-                    }
-                  />
-                </th>
-                <th>No.</th>
-                <th>Date & Time</th>
-                <th>Customer</th>
-                <th>Mobile</th>
-                <th>Total (₹)</th>
-                <th>Paid</th>
-                <th>Pending</th>
-                <th>View</th>
-                <th>Delete</th>
-              </tr>
-            </thead>
+        <table className="table table-bordered table-hover align-middle bg-light">
+          <thead className="table-secondary">
+            <tr>
+              <th>
+                <input
+                  type="checkbox"
+                  onChange={selectAllOnPage}
+                  checked={
+                    paginated.length > 0 &&
+                    paginated.every((tx) => selectedIds.includes(tx.id))
+                  }
+                />
+              </th>
+              <th>No.</th>
+              <th>Date & Time</th>
+              <th>Customer</th>
+              <th>Mobile</th>
+              <th>Total (₹)</th>
+              <th>Paid</th>
+              <th>Pending</th>
+              <th>View</th>
+              <th>Delete</th>
+            </tr>
+          </thead>
 
-            <tbody>
-              {paginated.length === 0 ? (
-                <tr>
-                  <td colSpan={10} className="text-center text-muted">
-                    No transactions found 🚫
+          <tbody>
+            {paginated.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="text-muted">
+                  No transactions found 🚫
+                </td>
+              </tr>
+            ) : (
+              paginated.map((tx, i) => (
+                <tr key={tx.id || i}>
+                  <td>
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.includes(tx.id)}
+                      onChange={() => toggleSelect(tx.id)}
+                    />
+                  </td>
+                  <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                  <td>{formatDate(tx.date)}</td>
+                  <td>{tx.customer || "—"}</td>
+                  <td>{tx.customerInfo?.contactPhone || "—"}</td>
+                  <td className="fw-bold text-primary">
+                    ₹{parseFloat(tx.total ?? 0).toFixed(2)}
+                  </td>
+                  <td className="text-success">
+                    ₹{parseFloat(tx.paid ?? 0).toFixed(2)}
+                  </td>
+                  <td className="text-danger">
+                    ₹{parseFloat(tx.pending ?? 0).toFixed(2)}
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-sm btn-info"
+                      onClick={() => onView(tx.id)}
+                    >
+                      👁️
+                    </button>
+                  </td>
+                  <td>
+                    <button
+                      className="btn btn-sm btn-danger"
+                      onClick={() => onDelete(tx.id)}
+                    >
+                      ❌
+                    </button>
                   </td>
                 </tr>
-              ) : (
-                // ✅ Sort by date (latest first) before mapping
-                [...paginated]
-                  .sort((a, b) => {
-                    const da = new Date(a.date);
-                    const db = new Date(b.date);
-                    return db - da; // Newest first
-                  })
-                  .map((tx, i) => (
-                    <tr key={tx.id || i}>
-                      <td>
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.includes(tx.id)}
-                          onChange={() => toggleSelect(tx.id)}
-                        />
-                      </td>
-                      <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                      <td>{formatDate(tx.date)}</td>
-                      <td>{tx.customer || "—"}</td>
-                      <td>{tx.customerInfo?.contactPhone || "—"}</td>
-                      <td className="fw-bold">
-                        ₹{parseFloat(tx.total ?? 0).toFixed(2)}
-                      </td>
-                      <td className="text-success">
-                        ₹{parseFloat(tx.paid ?? 0).toFixed(2)}
-                      </td>
-                      <td className="text-danger">
-                        ₹{parseFloat(tx.pending ?? 0).toFixed(2)}
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-info"
-                          onClick={() => onView(tx.id)}
-                        >
-                          👁️
-                        </button>
-                      </td>
-                      <td>
-                        <button
-                          className="btn btn-sm btn-danger"
-                          onClick={() => onDelete(tx.id)}
-                        >
-                          ❌
-                        </button>
-                      </td>
-                    </tr>
-                  ))
-              )}
-            </tbody>
+              ))
+            )}
+          </tbody>
 
-            <tfoot className="table-secondary fw-bold">
-              <tr>
-                <td colSpan="5" className="text-end">
-                  TOTAL:
-                </td>
-                <td className="text-primary">₹{totalSale.toFixed(2)}</td>
-                <td className="text-success">₹{totalPaid.toFixed(2)}</td>
-                <td className="text-danger">₹{totalPending.toFixed(2)}</td>
-                <td colSpan="2"></td>
-              </tr>
-            </tfoot>
-          </table>
-        </div>
+          <tfoot className="table-secondary fw-bold">
+            <tr>
+              <td colSpan="5" className="text-end">
+                TOTAL:
+              </td>
+              <td className="text-primary">₹{totalSale.toFixed(2)}</td>
+              <td className="text-success">₹{totalPaid.toFixed(2)}</td>
+              <td className="text-danger">₹{totalPending.toFixed(2)}</td>
+              <td colSpan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
 
         {/* Pagination */}
         <div className="d-flex justify-content-center gap-4 align-items-center mt-2 pb-4">
           <button
-            className="btn btn-outline-secondary bg-danger text-white"
+            className="btn btn-outline-light bg-danger text-white"
             disabled={currentPage === 1}
             onClick={() => setCurrentPage((p) => p - 1)}
           >
@@ -450,7 +382,7 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
             Page {currentPage} of {totalPages}
           </span>
           <button
-            className="btn btn-outline-secondary bg-danger text-white"
+            className="btn btn-outline-light bg-danger text-white"
             disabled={currentPage === totalPages}
             onClick={() => setCurrentPage((p) => p + 1)}
           >
@@ -459,8 +391,8 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
         </div>
       </div>
 
-      {/* Bulk Actions */}
-      <div className="d-flex gap-2 mb-5">
+      {/* Bulk Delete Buttons */}
+      <div className="d-flex gap-2 mb-4">
         <button
           className="btn btn-outline-danger"
           onClick={handleDeleteSelected}
@@ -477,9 +409,9 @@ export default function SaleTransactions({ transactions, onView, onDelete }) {
         </button>
       </div>
 
-      {/* Month-wise totals */}
+      {/* Month-wise Summary */}
       <div className="table-responsive mb-5">
-        <h3 className="text-center text-primary">📊Month-wise Totals</h3>
+        <h3 className="text-center text-primary">📊 Month-wise Totals</h3>
         <table className="table table-bordered table-hover text-center">
           <thead className="table-dark">
             <tr>

@@ -1,9 +1,9 @@
-// src/context/PurchaseContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const PurchaseContext = createContext();
 
 export const PurchaseProvider = ({ children }) => {
+  // -------------------- Load from localStorage --------------------
   const [purchases, setPurchases] = useState(() => {
     try {
       const raw = localStorage.getItem("purchases");
@@ -26,8 +26,23 @@ export const PurchaseProvider = ({ children }) => {
     }
   });
 
-  // ✅ Supplier ko memory me rakhne ke liye
+  // ✅ Supplier memory
   const [currentSupplier, setCurrentSupplier] = useState("");
+
+  // ✅ Retail inventory (used by RetailSalePage)
+  const [products, setProducts] = useState(() => {
+    try {
+      const raw = localStorage.getItem("retail_inventory");
+      const data = raw ? JSON.parse(raw) : [];
+      return Array.isArray(data) ? data : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem("retail_inventory", JSON.stringify(products));
+  }, [products]);
 
   const normalizeKey = (s) => (s || "").toString().trim().toLowerCase();
 
@@ -37,13 +52,11 @@ export const PurchaseProvider = ({ children }) => {
     const buyingPrice = parseFloat(itemData.buyingPrice) || 0;
     const key = normalizeKey(itemData.item);
 
-    // Selling price: optional, fallback to last saved
     const sellingPrice =
       itemData.sellingPrice !== undefined && itemData.sellingPrice !== null
         ? parseFloat(itemData.sellingPrice)
         : lastSellingPrices[key] || 0;
 
-    // Save/update selling price for this item
     if (sellingPrice) {
       setLastSellingPrices((prev) => ({
         ...prev,
@@ -60,13 +73,14 @@ export const PurchaseProvider = ({ children }) => {
         buyingPrice,
         sellingPrice,
         totalCost: quantity * buyingPrice,
+        image: itemData.imageBase64 || "",
       },
     ]);
 
-    // ✅ Update supplier
     if (itemData.supplier) setCurrentSupplier(itemData.supplier.trim());
   };
 
+  // -------------------- Complete Purchase --------------------
   const completePurchase = (supplier) => {
     if (purchaseCart.length === 0) return;
 
@@ -89,11 +103,18 @@ export const PurchaseProvider = ({ children }) => {
 
   const clearPurchaseCart = () => setPurchaseCart([]);
 
-  const addPurchase = ({ supplier, item, quantity, buyingPrice, sellingPrice }) => {
+  // -------------------- Add Single Purchase --------------------
+  const addPurchase = ({
+    supplier,
+    item,
+    quantity,
+    buyingPrice,
+    sellingPrice,
+    imageBase64,
+  }) => {
     const qty = parseFloat(quantity) || 0;
     const cost = parseFloat(buyingPrice) || 0;
     const key = normalizeKey(item);
-
     const sellPrice =
       sellingPrice !== undefined && sellingPrice !== null
         ? parseFloat(sellingPrice)
@@ -119,6 +140,7 @@ export const PurchaseProvider = ({ children }) => {
             buyingPrice: cost,
             sellingPrice: sellPrice,
             totalCost: qty * cost,
+            image: imageBase64 || "",
           },
         ],
         totalCost: qty * cost,
@@ -126,9 +148,18 @@ export const PurchaseProvider = ({ children }) => {
       },
     ]);
 
+    // ✅ Update or add to retail inventory
+    addOrUpdateProduct({
+      name: item,
+      stock: qty,
+      sellingPrice: sellPrice,
+      image: imageBase64 || "",
+    });
+
     if (supplier) setCurrentSupplier(supplier.trim());
   };
 
+  // -------------------- Delete Purchase --------------------
   const deletePurchase = (id) => {
     if (window.confirm("Delete this purchase?")) {
       setPurchases((prev) => prev.filter((p) => p.id !== id));
@@ -146,9 +177,39 @@ export const PurchaseProvider = ({ children }) => {
     );
   };
 
-  // ✅ Total Purchased Amount
+  // -------------------- Total Purchased Amount --------------------
   const getTotalPurchaseAmount = () =>
     purchases.reduce((sum, p) => sum + (parseFloat(p.totalCost) || 0), 0);
+
+  // -------------------- Retail Inventory Helper --------------------
+  const addOrUpdateProduct = (product) => {
+    setProducts((prev) => {
+      const existingIndex = prev.findIndex(
+        (p) => normalizeKey(p.name) === normalizeKey(product.name)
+      );
+      if (existingIndex >= 0) {
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          ...product,
+          stock:
+            (updated[existingIndex].stock || 0) +
+            (parseFloat(product.stock) || 0),
+        };
+        return updated;
+      }
+      return [
+        ...prev,
+        {
+          id: Date.now() + Math.random(),
+          name: product.name,
+          stock: parseFloat(product.stock) || 0,
+          sellingPrice: parseFloat(product.sellingPrice) || 0,
+          image: product.image || "",
+        },
+      ];
+    });
+  };
 
   // -------------------- Persist to localStorage --------------------
   useEffect(() => {
@@ -171,12 +232,16 @@ export const PurchaseProvider = ({ children }) => {
         deletePurchase,
         getPurchasedItems,
         getTotalPurchaseAmount,
-        sellingPriceHistory: lastSellingPrices, // ✅ exported alias
-        lastSellingPrices, // direct access
+        sellingPriceHistory: lastSellingPrices,
+        lastSellingPrices,
         setLastSellingPrices,
         setPurchaseCart,
         currentSupplier,
         setCurrentSupplier,
+        // Retail inventory
+        products,
+        setProducts,
+        addOrUpdateProduct,
       }}
     >
       {children}
