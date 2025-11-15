@@ -1,107 +1,89 @@
+// src/context/InventoryContext.jsx
 import React, { createContext, useContext, useState, useEffect } from "react";
 
 export const InventoryContext = createContext();
 
 export const InventoryProvider = ({ children }) => {
-  // -------------------- STATES --------------------
-  const [purchases, setPurchases] = useState(() => {
+  // -------------------- LOAD STATES FROM LOCAL STORAGE --------------------
+  const load = (key, fallback) => {
     try {
-      const raw = localStorage.getItem("purchases");
-      return raw ? JSON.parse(raw) : [];
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
     } catch {
-      return [];
+      return fallback;
     }
-  });
+  };
 
-  const [sales, setSales] = useState(() => {
-    try {
-      const raw = localStorage.getItem("sales");
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
+  const [purchases, setPurchases] = useState(() => load("purchases", []));
+  const [sales, setSales] = useState(() => load("sales", []));
+  const [customers, setCustomers] = useState(() => load("customers", []));
+  const [products, setProducts] = useState(() => load("products", []));
 
-  const [customers, setCustomers] = useState(() => {
-    try {
-      const raw = localStorage.getItem("customers");
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  const [products, setProducts] = useState(() => {
-    try {
-      const raw = localStorage.getItem("products");
-      return raw ? JSON.parse(raw) : [];
-    } catch {
-      return [];
-    }
-  });
-
-  // -------------------- ADD / UPDATE PRODUCT --------------------
+  // ============================================================
+  // 🔥 PRODUCT MANAGEMENT (Add / Update / Delete)
+  // ============================================================
   const addOrUpdateProduct = (product) => {
-    // product = { id?, name, buyingPrice, sellingPrice, stock, image }
     setProducts((prev) => {
       const existingIndex = prev.findIndex(
         (p) => p.name.trim().toLowerCase() === product.name.trim().toLowerCase()
       );
+
       if (existingIndex !== -1) {
-        // update existing
         const updated = [...prev];
-        updated[existingIndex] = { ...updated[existingIndex], ...product };
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          ...product,
+        };
         return updated;
-      } else {
-        // add new
-        return [...prev, { id: Date.now().toString(), ...product }];
       }
+
+      return [...prev, { id: Date.now().toString(), ...product }];
     });
   };
 
-  // -------------------- DELETE PRODUCT --------------------
   const deleteProduct = (productId) => {
-    if (window.confirm("Delete this product permanently?")) {
-      setProducts((prev) => prev.filter((p) => p.id !== productId));
-    }
+    if (!window.confirm("Delete this product permanently?")) return;
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
   };
 
-  // -------------------- ADD SALE --------------------
+  // ============================================================
+  // 🔥 ADD SALE (Retail Sale)
+  // ============================================================
   const addSale = (customer, contactPhone, items, paidAmount = 0) => {
-    const totalAmount = items.reduce((sum, it) => sum + it.total, 0);
+    const totalAmount = items.reduce((s, it) => s + it.total, 0);
 
     const newSale = {
       id: Date.now().toString(),
       date: new Date().toISOString().slice(0, 10),
       customer,
       contactPhone,
-      items, // [{ product, quantity, sellingPrice, total }]
+      items,
       totalAmount,
       paidAmount,
     };
 
     setSales((prev) => [...prev, newSale]);
 
-    // ✅ Update stock after sale
+    // 🟢 Update Product Stock (Retail Sale ↓)
     setProducts((prev) =>
       prev.map((p) => {
-        const soldItem = items.find((i) => i.product === p.name);
-        if (!soldItem) return p;
-        const newStock = Math.max((p.stock || 0) - soldItem.quantity, 0);
-        return { ...p, stock: newStock };
+        const sold = items.find((it) => it.product === p.name);
+        if (!sold) return p;
+        return { ...p, stock: Math.max((p.stock || 0) - sold.quantity, 0) };
       })
     );
 
-    // ✅ Update customer record too
+    // 🟢 Customer Ledger Update
     setCustomers((prev) => {
-      const existing = prev.find(
+      const found = prev.find(
         (c) =>
-          c.name.trim().toLowerCase() === customer.trim().toLowerCase() &&
+          c.name.toLowerCase() === customer.toLowerCase() &&
           (c.contactPhone || "") === (contactPhone || "")
       );
-      if (existing) {
+
+      if (found) {
         return prev.map((c) =>
-          c.id === existing.id
+          c.id === found.id
             ? {
                 ...c,
                 paidAmount: (c.paidAmount || 0) + paidAmount,
@@ -128,7 +110,9 @@ export const InventoryProvider = ({ children }) => {
     });
   };
 
-  // -------------------- RECORD PAYMENT --------------------
+  // ============================================================
+  // 🔥 RECORD CUSTOMER PAYMENT
+  // ============================================================
   const recordPayment = (customerId, amount) => {
     setCustomers((prev) =>
       prev.map((c) =>
@@ -143,51 +127,57 @@ export const InventoryProvider = ({ children }) => {
     );
   };
 
-  // -------------------- DELETE STOCK ITEM --------------------
+  // ============================================================
+  // 🔥 DELETE STOCK ITEM EVERYWHERE
+  // ============================================================
   const deleteStockItem = (itemName) => {
-    if (
-      window.confirm(`Delete all purchase & sale records for "${itemName}"?`)
-    ) {
-      setPurchases((prev) =>
-        prev
-          .map((p) => ({
-            ...p,
-            items: (p.items || []).filter((it) => it.item !== itemName),
-          }))
-          .filter((p) => p.items.length > 0)
-      );
+    if (!window.confirm(`Delete all purchase & sale data for "${itemName}"?`))
+      return;
 
-      setSales((prev) =>
-        prev.map((s) => ({
-          ...s,
-          items: (s.items || []).filter((it) => it.product !== itemName),
+    setPurchases((prev) =>
+      prev
+        .map((p) => ({
+          ...p,
+          items: (p.items || []).filter((it) => it.item !== itemName),
         }))
-      );
+        .filter((p) => p.items.length > 0)
+    );
 
-      setProducts((prev) => prev.filter((p) => p.name !== itemName));
-    }
+    setSales((prev) =>
+      prev.map((s) => ({
+        ...s,
+        items: (s.items || []).filter((it) => it.product !== itemName),
+      }))
+    );
+
+    setProducts((prev) => prev.filter((p) => p.name !== itemName));
   };
 
-  // -------------------- RESET ALL DATA --------------------
+  // ============================================================
+  // 🔥 RESET ALL DATA
+  // ============================================================
   const resetData = () => {
-    if (window.confirm("This will permanently delete ALL data. Continue?")) {
-      setSales([]);
-      setPurchases([]);
-      setCustomers([]);
-      setProducts([]);
-      localStorage.removeItem("sales");
-      localStorage.removeItem("purchases");
-      localStorage.removeItem("customers");
-      localStorage.removeItem("products");
-    }
+    if (!window.confirm("This will delete all data permanently!")) return;
+
+    setSales([]);
+    setPurchases([]);
+    setCustomers([]);
+    setProducts([]);
+
+    localStorage.removeItem("sales");
+    localStorage.removeItem("purchases");
+    localStorage.removeItem("customers");
+    localStorage.removeItem("products");
   };
 
-  // -------------------- GET INVENTORY --------------------
+  // ============================================================
+  // 🔥 INVENTORY CALCULATOR
+  // ============================================================
   const getInventory = () => {
     const stockMap = {};
 
-    // Purchases
-    purchases.forEach((p) => {
+    // PURCHASE STOCK
+    purchases.forEach((p) =>
       (p.items || []).forEach((it) => {
         if (!stockMap[it.item]) {
           stockMap[it.item] = {
@@ -197,18 +187,19 @@ export const InventoryProvider = ({ children }) => {
             sellingPrice: 0,
           };
         }
+
         const qty = Number(it.quantity) || 0;
-        const buyingPrice = Number(it.buyingPrice) || 0;
-        const sellingPrice = Number(it.sellingPrice) || 0;
+        const buy = Number(it.buyingPrice) || 0;
+        const sell = Number(it.sellingPrice) || 0;
 
         stockMap[it.item].purchased += qty;
-        stockMap[it.item].costSum += buyingPrice * qty;
-        if (sellingPrice > 0) stockMap[it.item].sellingPrice = sellingPrice;
-      });
-    });
+        stockMap[it.item].costSum += buy * qty;
+        if (sell > 0) stockMap[it.item].sellingPrice = sell;
+      })
+    );
 
-    // Sales
-    sales.forEach((s) => {
+    // SALES STOCK
+    sales.forEach((s) =>
       (s.items || []).forEach((it) => {
         if (!stockMap[it.product]) {
           stockMap[it.product] = {
@@ -219,11 +210,12 @@ export const InventoryProvider = ({ children }) => {
           };
         }
         stockMap[it.product].sold += Number(it.quantity) || 0;
-      });
-    });
+      })
+    );
 
     return Object.entries(stockMap).map(([item, data]) => {
-      const buyingPrice = data.purchased > 0 ? data.costSum / data.purchased : 0;
+      const buyingPrice =
+        data.purchased > 0 ? data.costSum / data.purchased : 0;
       const inStock = data.purchased - data.sold;
       const totalValue = buyingPrice * inStock;
 
@@ -235,7 +227,8 @@ export const InventoryProvider = ({ children }) => {
         purchased: data.purchased,
         sold: data.sold,
         buyingPrice,
-        sellingPrice: data.sellingPrice || productData?.sellingPrice || 0,
+        sellingPrice:
+          data.sellingPrice || productData?.sellingPrice || 0,
         inStock,
         totalValue,
         image,
@@ -243,18 +236,21 @@ export const InventoryProvider = ({ children }) => {
     });
   };
 
-  // -------------------- PROFIT / LOSS --------------------
+  // ============================================================
+  // 🔥 PROFIT & LOSS SUMMARY
+  // ============================================================
   const getProfitLoss = () => {
     const totalPurchase = purchases.reduce(
-      (sum, p) => sum + (p.totalCost || 0),
+      (s, p) => s + (p.totalCost || 0),
       0
     );
-    const totalSales = sales.reduce((sum, s) => sum + (s.totalAmount || 0), 0);
-
+    const totalSales = sales.reduce((s, p) => s + (p.totalAmount || 0), 0);
     return { totalPurchase, totalSales, profit: totalSales - totalPurchase };
   };
 
-  // -------------------- TRANSACTIONS --------------------
+  // ============================================================
+  // 🔥 TRANSACTIONS
+  // ============================================================
   const getTransactions = () => {
     const combined = [
       ...purchases.flatMap((p) =>
@@ -278,24 +274,20 @@ export const InventoryProvider = ({ children }) => {
     return combined.sort((a, b) => b.date.localeCompare(a.date));
   };
 
-  // -------------------- PERSIST DATA --------------------
-  useEffect(() => {
-    localStorage.setItem("purchases", JSON.stringify(purchases));
-  }, [purchases]);
+  // ============================================================
+  // 🔥 SAVE TO LOCAL STORAGE
+  // ============================================================
+  const save = (key, value) =>
+    localStorage.setItem(key, JSON.stringify(value));
 
-  useEffect(() => {
-    localStorage.setItem("sales", JSON.stringify(sales));
-  }, [sales]);
+  useEffect(() => save("purchases", purchases), [purchases]);
+  useEffect(() => save("sales", sales), [sales]);
+  useEffect(() => save("customers", customers), [customers]);
+  useEffect(() => save("products", products), [products]);
 
-  useEffect(() => {
-    localStorage.setItem("customers", JSON.stringify(customers));
-  }, [customers]);
-
-  useEffect(() => {
-    localStorage.setItem("products", JSON.stringify(products));
-  }, [products]);
-
-  // -------------------- EXPORT CONTEXT --------------------
+  // ============================================================
+  // 🔥 EXPORT
+  // ============================================================
   return (
     <InventoryContext.Provider
       value={{
@@ -303,19 +295,24 @@ export const InventoryProvider = ({ children }) => {
         sales,
         customers,
         products,
+
         setPurchases,
         setSales,
         setCustomers,
         setProducts,
+
+        addOrUpdateProduct,
+        deleteProduct,
+
+        addSale,
+        recordPayment,
+
         getInventory,
         getProfitLoss,
         getTransactions,
+
         deleteStockItem,
         resetData,
-        addSale,
-        recordPayment,
-        addOrUpdateProduct,
-        deleteProduct,
       }}
     >
       {children}

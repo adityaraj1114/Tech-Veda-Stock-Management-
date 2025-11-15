@@ -2,35 +2,44 @@ import React, { useEffect, useState } from "react";
 
 /**
  * Props:
- * - onClose(): close modal
- * - onSave(product): save product to PurchaseContext (id, name, sellingPrice, stock, image)
- * - inventory: existing products array (for search/select)
+ * - onClose()
+ * - onSave(product)  → adds product to PURCHASE LIST
+ * - addOrUpdateProduct(product) → adds/updates in PRODUCTS LIST (inventory)
+ * - inventory = [] → existing products
  */
-export default function AddProductModal({ onClose, onSave, inventory = [] }) {
+export default function AddProductModal({
+  onClose,
+  onSave,
+  addOrUpdateProduct,
+  inventory = [],
+}) {
   const [search, setSearch] = useState("");
   const [selectedId, setSelectedId] = useState("new");
+
   const [form, setForm] = useState({
     name: "",
     sellingPrice: "",
     stock: "",
-    imageBase64: "",
+    image: "", // FIX: use image instead of imageBase64
   });
 
+  // Load product details when selected
   useEffect(() => {
-    if (selectedId && selectedId !== "new") {
+    if (selectedId !== "new") {
       const prod = inventory.find((p) => String(p.id) === String(selectedId));
       if (prod) {
         setForm({
           name: prod.name || "",
           sellingPrice: prod.sellingPrice ?? "",
           stock: prod.stock ?? "",
-          imageBase64: prod.image ?? "",
+          image: prod.image ?? "",
         });
         setSearch(prod.name || "");
       }
     }
   }, [selectedId, inventory]);
 
+  // Convert image to base64
   const fileToBase64 = (file) =>
     new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -43,11 +52,7 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
     const file = e.target.files?.[0];
     if (!file) return;
     const base64 = await fileToBase64(file);
-    setForm((p) => ({ ...p, imageBase64: base64 }));
-  };
-
-  const handleSelectSuggestion = (p) => {
-    setSelectedId(p.id);
+    setForm((p) => ({ ...p, image: base64 }));
   };
 
   const handleSave = () => {
@@ -55,18 +60,29 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
       alert("Please provide product name and selling price.");
       return;
     }
+
     const id = selectedId === "new" ? `p-${Date.now()}` : selectedId;
+
     const payload = {
       id,
       name: form.name.trim(),
       sellingPrice: Number(form.sellingPrice),
       stock: Number(form.stock) || 0,
-      image: form.imageBase64 || "",
+      image: form.image || "",
     };
+
+    // 1️⃣ Add/Update in central inventory (PRODUCTS LIST)
+    addOrUpdateProduct(payload);
+
+    // 2️⃣ Add to purchase list (RETAIL SALE)
     onSave(payload);
+
+    // Reset form
     setSearch("");
     setSelectedId("new");
-    setForm({ name: "", sellingPrice: "", stock: "", imageBase64: "" });
+    setForm({ name: "", sellingPrice: "", stock: "", image: "" });
+
+    onClose();
   };
 
   return (
@@ -106,17 +122,30 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
               className="form-control mb-2"
               value={search}
               onChange={(e) => {
-                setSearch(e.target.value);
+                const value = e.target.value;
+                setSearch(value);
+
                 const found = inventory.find((p) =>
-                  p.name.toLowerCase().includes(e.target.value.toLowerCase())
+                  p.name.toLowerCase().includes(value.toLowerCase())
                 );
-                if (found) setSelectedId(found.id);
-                else setSelectedId("new");
-                setForm((f) => ({ ...f, name: e.target.value }));
+
+                if (found) {
+                  setSelectedId(found.id);
+                  setForm({
+                    name: found.name,
+                    sellingPrice: found.sellingPrice,
+                    stock: found.stock,
+                    image: found.image,
+                  });
+                } else {
+                  setSelectedId("new");
+                  setForm((prev) => ({ ...prev, name: value }));
+                }
               }}
-              placeholder="Search saved products or type new product name..."
+              placeholder="Search saved products or type new product..."
             />
 
+            {/* Suggestions */}
             {search.trim() && (
               <ul
                 className="list-group position-absolute"
@@ -138,16 +167,23 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
                       className="list-group-item list-group-item-action"
                       style={{ cursor: "pointer" }}
                       onClick={() => {
-                        handleSelectSuggestion(p);
+                        setSelectedId(p.id);
                         setSearch(p.name);
+                        setForm({
+                          name: p.name,
+                          sellingPrice: p.sellingPrice,
+                          stock: p.stock,
+                          image: p.image,
+                        });
                       }}
                     >
-                      {p.name} — ₹{Number(p.sellingPrice).toFixed(2)} — In stock: {p.stock}
+                      {p.name} — ₹{Number(p.sellingPrice)} — Stock: {p.stock}
                     </li>
                   ))}
               </ul>
             )}
 
+            {/* FORM */}
             <div className="row mt-4">
               <div className="col-md-6 mb-2">
                 <label className="form-label">Name</label>
@@ -163,8 +199,8 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
               <div className="col-md-3 mb-2">
                 <label className="form-label">Selling Price (₹)</label>
                 <input
-                  className="form-control"
                   type="number"
+                  className="form-control"
                   value={form.sellingPrice}
                   onChange={(e) =>
                     setForm((p) => ({ ...p, sellingPrice: e.target.value }))
@@ -175,8 +211,8 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
               <div className="col-md-3 mb-2">
                 <label className="form-label">In-stock Qty</label>
                 <input
-                  className="form-control"
                   type="number"
+                  className="form-control"
                   value={form.stock}
                   onChange={(e) =>
                     setForm((p) => ({ ...p, stock: e.target.value }))
@@ -188,9 +224,10 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
                 <label className="form-label">Image (optional)</label>
                 <div className="d-flex align-items-center gap-3">
                   <input type="file" accept="image/*" onChange={handleImage} />
-                  {form.imageBase64 && (
+
+                  {form.image && (
                     <img
-                      src={form.imageBase64}
+                      src={form.image}
                       alt="preview"
                       style={{
                         width: 80,
@@ -210,8 +247,9 @@ export default function AddProductModal({ onClose, onSave, inventory = [] }) {
             <button className="btn btn-outline-secondary" onClick={onClose}>
               Cancel
             </button>
+
             <button className="btn btn-success px-4" onClick={handleSave}>
-              ✅ Add / Update
+              ✅ Save Product
             </button>
           </div>
         </div>
