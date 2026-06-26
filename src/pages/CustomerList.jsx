@@ -6,6 +6,7 @@ import Papa from "papaparse";
 import { saveAs } from "file-saver";
 import * as XLSX from "xlsx";
 import { motion } from "framer-motion";
+import { useSales } from "../context/SalesContext";
 import {
   FileSpreadsheet,
   FileText,
@@ -18,6 +19,7 @@ import {
 export default function CustomerList() {
   const { customers = [], deleteCustomer } = useCustomer();
   const navigate = useNavigate();
+  const { sales = [] } = useSales();
 
   const [search, setSearch] = useState("");
   const [filterType, setFilterType] = useState("all"); // all | pending | cleared
@@ -28,10 +30,57 @@ export default function CustomerList() {
   const normalizePhone = (phone) =>
     (phone || "").replace(/\D/g, "").trim() || "NA";
 
+  const customerData = useMemo(() => {
+  const customerMap = {};
+
+  // Customer master data
+  customers.forEach((cust) => {
+    customerMap[cust.name] = {
+      ...cust,
+      totalPurchase: 0,
+      paidAmount: 0,
+      pendingAmount: 0,
+    };
+  });
+
+  // Sales se live calculation
+  sales.forEach((sale) => {
+    const customerName = sale.customer?.trim();
+
+    if (!customerName) return;
+
+    if (!customerMap[customerName]) {
+      customerMap[customerName] = {
+        id: sale.id,
+        name: customerName,
+        contactPhone: sale.customerInfo?.contactPhone || "",
+        totalPurchase: 0,
+        paidAmount: 0,
+        pendingAmount: 0,
+      };
+    }
+
+    customerMap[customerName].totalPurchase += Number(
+      sale.total || 0
+    );
+
+    customerMap[customerName].paidAmount += Number(
+      sale.paid || 0
+    );
+
+    customerMap[customerName].pendingAmount += Number(
+      sale.pending || 0
+    );
+  });
+
+  return Object.values(customerMap);
+}, [customers, sales]);
+
   // Filter, dedupe, search, sort
   const filtered = useMemo(() => {
     const seen = new Set();
-    let list = customers
+    // let list = customers
+    let list = customerData
       .filter((c) => c?.name && c.name.trim() !== "")
       .filter((c) => {
         const key = `${c.name.trim().toLowerCase()}_${normalizePhone(
@@ -53,12 +102,17 @@ export default function CustomerList() {
     if (filterType === "pending") {
       list = list.filter((c) => Number(c.pendingAmount) > 0);
     } else if (filterType === "cleared") {
-      list = list.filter((c) => Number(c.pendingAmount) <= 0);
+      // list = list.filter((c) => Number(c.pendingAmount) <= 0);
+      list = list.filter(
+  (c) => Number(c.pendingAmount || 0) > 0
+);
+     
     }
 
     // Sort latest first
     return list.sort((a, b) => (b.id || 0) - (a.id || 0));
-  }, [customers, search, filterType]);
+    }, [customerData, search, filterType]);
+  // }, [customers, search, filterType]);
 
   // Pagination
   const paginated = useMemo(() => {

@@ -19,39 +19,75 @@ export const ProfileContext = createContext({
 // ----------------------------------------------------
 // Helper: safely parse from localStorage
 // ----------------------------------------------------
+// const safeParse = (key) => {
+//   try {
+//     const raw = localStorage.getItem(key);
+//     const data = raw ? JSON.parse(raw) : {};
+
+//     if (typeof data !== "object" || data === null) {
+//       return {
+//         shopName: "",
+//         ownerName: "",
+//         address: "",
+//         phone: "",
+//         gstNumber: "",
+//         gstPercent: 0,
+//       };
+//     }
+
+//     return {
+//       shopName: data.shopName || "",
+//       ownerName: data.ownerName || "",
+//       address: data.address || "",
+//       phone: data.phone || "",
+//       gstNumber: data.gstNumber || "",
+//       gstPercent: parseFloat(data.gstPercent) || 0,
+//     };
+//   } catch {
+//     return {
+//       shopName: "",
+//       ownerName: "",
+//       address: "",
+//       phone: "",
+//       gstNumber: "",
+//       gstPercent: 0,
+//     };
+//   }
+// };
+
+const defaultProfile = {
+  ownerName: "",
+  shopName: "",
+  addressLine1: "",
+  addressLine2: "",
+  city: "",
+  state: "",
+  pincode: "",
+  phone: "",
+  email: "",
+  gstin: "",
+  pan: "",
+  website: "",
+  logo: "",
+  gstPercent: 0,
+};
+
 const safeParse = (key) => {
   try {
     const raw = localStorage.getItem(key);
-    const data = raw ? JSON.parse(raw) : {};
 
-    if (typeof data !== "object" || data === null) {
-      return {
-        shopName: "",
-        ownerName: "",
-        address: "",
-        phone: "",
-        gstNumber: "",
-        gstPercent: 0,
-      };
-    }
+    if (!raw) return defaultProfile;
+
+    const data = JSON.parse(raw);
 
     return {
-      shopName: data.shopName || "",
-      ownerName: data.ownerName || "",
-      address: data.address || "",
-      phone: data.phone || "",
-      gstNumber: data.gstNumber || "",
-      gstPercent: parseFloat(data.gstPercent) || 0,
+      ...defaultProfile,
+      ...data,
+      gstPercent: Number(data.gstPercent) || 0,
     };
-  } catch {
-    return {
-      shopName: "",
-      ownerName: "",
-      address: "",
-      phone: "",
-      gstNumber: "",
-      gstPercent: 0,
-    };
+  } catch (err) {
+    console.error(err);
+    return defaultProfile;
   }
 };
 
@@ -71,17 +107,25 @@ export function ProfileProvider({ children }) {
   }, [profile]);
 
   // Update profile with automatic gst normalization
+
   const updateProfile = (newData) => {
-    const updated = {
-      ...profile,
-      ...newData,
-      gstPercent:
-        newData.gstPercent !== undefined
-          ? parseFloat(newData.gstPercent) || 0
-          : profile.gstPercent,
-    };
-    setProfile(updated);
-  };
+  setProfile((prev) => ({
+    ...prev,
+    ...newData,
+    gstPercent: Number(newData.gstPercent ?? prev.gstPercent) || 0,
+  }));
+};
+  // const updateProfile = (newData) => {
+  //   const updated = {
+  //     ...profile,
+  //     ...newData,
+  //     gstPercent:
+  //       newData.gstPercent !== undefined
+  //         ? parseFloat(newData.gstPercent) || 0
+  //         : profile.gstPercent,
+  //   };
+  //   setProfile(updated);
+  // };
 
   return (
     <ProfileContext.Provider value={{ profile, updateProfile }}>

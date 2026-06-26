@@ -106,10 +106,21 @@ export const SalesProvider = ({ children }) => {
     setSales((prev) => [...entries, ...prev]);
 
     // ✅ Update customer ledger
-    updateCustomerLedger(
-      saleData.customer?.trim() || saleData.customerInfo?.name?.trim() || "Unknown",
-      paid
-    );
+
+   updateCustomerLedger(customerName, {
+  totalPurchase: totalSaleAmount,
+  paidAmount: paid,
+  pendingAmount: totalSaleAmount - paid,
+  contactPhone: saleData.customerInfo?.contactPhone || "",
+  billingAddress: saleData.customerInfo?.billingAddress || "",
+  shippingAddress: saleData.customerInfo?.shippingAddress || "",
+  gstin: saleData.customerInfo?.gstin || "",
+});
+
+  //   updateCustomerLedger(
+  //     saleData.customer?.trim() || saleData.customerInfo?.name?.trim() || "Unknown",
+  //     paid
+  //   );
   };
 
   // -------------------- Update Sale Payment --------------------

@@ -121,51 +121,142 @@ export const CustomerProvider = ({ children }) => {
   };
 
   // -------------------- Update Customer Ledger --------------------
-  const updateCustomerLedger = (customerName, amount, extraInfo = {}) => {
-    setCustomers((prev) => {
-      const phoneB = normalizePhone(extraInfo.contactPhone);
 
-      const existing = prev.find((c) => {
-        const sameName = c.name === customerName;
-        const phoneA = normalizePhone(c.contactPhone);
-        if (phoneA === "NA" || phoneB === "NA") {
-          return sameName;
-        }
-        return sameName && phoneA === phoneB;
-      });
+  // -------------------- Update Customer Ledger --------------------
+const updateCustomerLedger = (
+  customerName,
+  financialData = {},
+  extraInfo = {}
+) => {
+  setCustomers((prev) => {
+    const phoneB = normalizePhone(extraInfo.contactPhone);
 
-      if (existing) {
-        return prev.map((c) =>
-          c.id === existing.id
-            ? {
-                ...c,
-                totalPurchase: (c.totalPurchase || 0) + amount,
-                pendingAmount: (c.pendingAmount || 0) + amount,
-                contactPhone: extraInfo.contactPhone || c.contactPhone,
-                billingAddress: extraInfo.billingAddress || c.billingAddress,
-                shippingAddress: extraInfo.shippingAddress || c.shippingAddress,
-                gstin: extraInfo.gstin || c.gstin,
-              }
-            : c
-        );
-      } else {
-        return [
-          ...prev,
-          {
-            id: Date.now() + Math.random(),
-            name: customerName,
-            contactPhone: extraInfo.contactPhone || "",
-            billingAddress: extraInfo.billingAddress || "",
-            shippingAddress: extraInfo.shippingAddress || "",
-            gstin: extraInfo.gstin || "",
-            totalPurchase: amount,
-            paidAmount: 0,
-            pendingAmount: amount,
-          },
-        ];
+    const existing = prev.find((c) => {
+      const sameName =
+        (c.name || "").trim().toLowerCase() ===
+        (customerName || "").trim().toLowerCase();
+
+      const phoneA = normalizePhone(c.contactPhone);
+
+      if (phoneA === "NA" || phoneB === "NA") {
+        return sameName;
       }
+
+      return sameName && phoneA === phoneB;
     });
-  };
+
+    // Financial values
+    const totalPurchase = Number(financialData.totalPurchase || 0);
+    const paidAmount = Number(financialData.paidAmount || 0);
+    const pendingAmount = Number(financialData.pendingAmount || 0);
+
+    if (existing) {
+      return prev.map((c) =>
+        c.id === existing.id
+          ? {
+              ...c,
+
+              // Financial Updates
+              totalPurchase:
+                Number(c.totalPurchase || 0) + totalPurchase,
+
+              paidAmount:
+                Number(c.paidAmount || 0) + paidAmount,
+
+              pendingAmount:
+                Number(c.pendingAmount || 0) + pendingAmount,
+
+              // Customer Info
+              contactPhone:
+                extraInfo.contactPhone || c.contactPhone,
+
+              billingAddress:
+                extraInfo.billingAddress || c.billingAddress,
+
+              shippingAddress:
+                extraInfo.shippingAddress || c.shippingAddress,
+
+              gstin:
+                extraInfo.gstin || c.gstin,
+            }
+          : c
+      );
+    }
+
+    // Create New Customer
+    return [
+      ...prev,
+      {
+        id: Date.now() + Math.random(),
+
+        name: customerName,
+
+        contactPhone:
+          extraInfo.contactPhone || "",
+
+        billingAddress:
+          extraInfo.billingAddress || "",
+
+        shippingAddress:
+          extraInfo.shippingAddress || "",
+
+        gstin:
+          extraInfo.gstin || "",
+
+        totalPurchase,
+        paidAmount,
+        pendingAmount,
+      },
+    ];
+  });
+};
+
+
+  // const updateCustomerLedger = (customerName, amount, extraInfo = {}) => {
+  //   setCustomers((prev) => {
+  //     const phoneB = normalizePhone(extraInfo.contactPhone);
+
+  //     const existing = prev.find((c) => {
+  //       const sameName = c.name === customerName;
+  //       const phoneA = normalizePhone(c.contactPhone);
+  //       if (phoneA === "NA" || phoneB === "NA") {
+  //         return sameName;
+  //       }
+  //       return sameName && phoneA === phoneB;
+  //     });
+
+  //     if (existing) {
+  //       return prev.map((c) =>
+  //         c.id === existing.id
+  //           ? {
+  //               ...c,
+  //               totalPurchase: (c.totalPurchase || 0) + amount,
+  //               pendingAmount: (c.pendingAmount || 0) + amount,
+  //               contactPhone: extraInfo.contactPhone || c.contactPhone,
+  //               billingAddress: extraInfo.billingAddress || c.billingAddress,
+  //               shippingAddress: extraInfo.shippingAddress || c.shippingAddress,
+  //               gstin: extraInfo.gstin || c.gstin,
+  //             }
+  //           : c
+  //       );
+  //     } else {
+  //       return [
+  //         ...prev,
+  //         {
+  //           id: Date.now() + Math.random(),
+  //           name: customerName,
+  //           contactPhone: extraInfo.contactPhone || "",
+  //           billingAddress: extraInfo.billingAddress || "",
+  //           shippingAddress: extraInfo.shippingAddress || "",
+  //           gstin: extraInfo.gstin || "",
+  //           totalPurchase: amount,
+  //           paidAmount: 0,
+  //           pendingAmount: amount,
+  //         },
+  //       ];
+  //     }
+  //   });
+  // };
 
   // -------------------- Record Payment --------------------
   const recordPayment = (customerId, amount) => {

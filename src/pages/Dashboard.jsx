@@ -70,9 +70,9 @@ const Dashboard = () => {
         style={{ background: "linear-gradient(135deg, #7F00FF, #00c6ff)", color: "#fff" }}
       >
         <h1 className="h3 mb-0">📊 Dashboard</h1>
-        <button className="btn btn-light btn-sm fw-bold" onClick={resetData}>
+        {/* <button className="btn btn-light btn-sm fw-bold" onClick={resetData}>
           🔄 Reset All Data
-        </button>
+        </button> */}
       </div>
 
       {/* Summary Cards */}

@@ -7,6 +7,7 @@ import BillPreview from "../components/BillPreview";
 import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 import Papa from "papaparse";
 import * as XLSX from "xlsx";
+import { useLocation } from "react-router-dom";
 import { saveAs } from "file-saver";
 import { motion } from "framer-motion";
 
@@ -14,14 +15,23 @@ export default function CustomerDetails() {
   const { id } = useParams();
   const { customers, recordPayment } = useCustomer();
   const { sales, updateSalePayment } = useSales();
+  const location = useLocation();
 
   const [showBillFor, setShowBillFor] = useState(null);
   const [searchDate, setSearchDate] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  const cust = customers.find((c) => String(c.id) === String(id));
-  if (!cust) return <p className="text-danger">Customer not found 🚫</p>;
+  // const cust = customers.find((c) => String(c.id) === String(id));
+  // if (!cust) return <p className="text-danger">Customer not found 🚫</p>;
+
+  const cust =
+  location.state ||
+  customers.find((c) => String(c.id) === String(id));
+
+if (!cust) {
+  return <p className="text-danger">Customer not found 🚫</p>;
+}
 
   // ✅ Group sales by transaction (customer + date) with proper discount & GST
   const customerSales = useMemo(() => {

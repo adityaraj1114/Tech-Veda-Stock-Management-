@@ -10,6 +10,7 @@ export default function Profile() {
 
   const [form, setForm] = useState({
     ownerName: "",
+    // gstPercent: 0,
     shopName: "",
     addressLine1: "",
     addressLine2: "",
