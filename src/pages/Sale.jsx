@@ -1,5 +1,5 @@
-// src/pages/Sales.jsx
-import React, { useState, useEffect } from "react";
+// src/pages/Sale.jsx
+import React, { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import html2pdf from "html2pdf.js/dist/html2pdf.min.js";
 import { useCustomer } from "../context/CustomerContext";
@@ -21,29 +21,31 @@ export default function Sales() {
     customerInfo,
     setCustomerInfo,
   } = useCustomer();
-  const { addSale, setTotalSales } = useSales();
+
+  // ✅ FIX: sales aur addSale SalesContext se, setTotalSales hata diya (ab SalesContext hi manage karega)
+  const { sales, addSale, updateSalePayment } = useSales();
   const { getInventory } = useInventory();
   const { profile } = useProfile();
 
-  // payment / cart / product states
+  // -------------------- Form States --------------------
   const [paidAmount, setPaidAmount] = useState("");
   const [cart, setCart] = useState([]);
   const [product, setProduct] = useState(null);
   const [quantity, setQuantity] = useState("");
   const [price, setPrice] = useState("");
-  const [discount, setDiscount] = useState(""); // % per-item (optional)
-  const [gst, setGst] = useState(""); // % per-item (optional; fallback to profile.gstPercent)
+  const [discount, setDiscount] = useState("");
+  const [gst, setGst] = useState("");
+  const [showBillFor, setShowBillFor] = useState(null);
 
-  // inventory -> productOptions for react-select
+  // -------------------- Inventory → Product Options --------------------
   const inventory = getInventory();
   const productOptions = inventory.map((p) => ({
     value: p.item,
     label: p.item,
-    // prefer explicit selling price in inventory, fallback to price/unit fields
     price: p.sellingPrice ?? p.price ?? p.unitPrice ?? p.buyingPrice ?? 0,
   }));
 
-  // Add product to cart (computes discount + gst + final total per row)
+  // -------------------- Add Product to Cart --------------------
   const handleAddToCart = (e) => {
     if (e) e.preventDefault();
     if (!product || !quantity || price === "" || price === null) return;
@@ -51,7 +53,6 @@ export default function Sales() {
     const qty = Number(quantity) || 0;
     const selling = Number(price) || 0;
     const discountPct = discount === "" ? 0 : Number(discount) || 0;
-    // If user didn't enter GST for this item, use profile.gstPercent (or 0)
     const gstPct =
       gst === "" || gst === null
         ? Number(profile?.gstPercent || 0)
@@ -78,7 +79,6 @@ export default function Sales() {
       },
     ]);
 
-    // reset product inputs
     setProduct(null);
     setQuantity("");
     setPrice("");
@@ -86,53 +86,27 @@ export default function Sales() {
     setGst("");
   };
 
-  const removeFromCart = (i) => setCart((c) => c.filter((_, idx) => idx !== i));
+  const removeFromCart = (i) =>
+    setCart((c) => c.filter((_, idx) => idx !== i));
 
-  // Transactions stored locally
-  const [transactions, setTransactions] = useState(() => {
-    const saved = localStorage.getItem("transactions");
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // persist transactions and update total sales
-  useEffect(() => {
-    localStorage.setItem("transactions", JSON.stringify(transactions));
-    const total = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
-    setTotalSales?.(total);
-  }, [transactions, setTotalSales]);
-
-  const [showBillFor, setShowBillFor] = useState(null);
-
-  // Finalize sale: validate, create tx, update customers & sales context
+  // -------------------- Finalize Sale --------------------
   const handleFinalizeSale = () => {
     if (!customerInfo.name || cart.length === 0) {
       alert("⚠️ Please enter customer details and add products.");
       return;
     }
 
-    // transaction total is sum of per-item final totals (already includes discount+gst)
     const total = cart.reduce((sum, it) => sum + (it.total || 0), 0);
     const paid = parseFloat(paidAmount || 0);
     const pending = Number((total - paid).toFixed(2));
     const date = new Date().toLocaleString();
+
+    // ✅ FIX: txId alag generate karo taaki BillPreview ke liye use ho sake
     const txId = Date.now() + Math.random();
 
-    const tx = {
-      id: txId,
-      customer: customerInfo.name.trim(),
-      date,
-      items: cart,
-      total: Number(total.toFixed(2)),
-      paid: Number(paid.toFixed(2)),
-      pending,
-      customerInfo: { ...customerInfo },
-    };
-
-    setTransactions((t) => [...t, tx]);
-    setShowBillFor(txId);
-
-    // Send to Sales context; SalesContext handles splitting entries etc.
+    // ✅ FIX: SalesContext ke addSale mein txId bhi pass karo
     addSale({
+      id: txId,
       customer: customerInfo.name.trim(),
       customerInfo: { ...customerInfo },
       items: cart,
@@ -142,7 +116,10 @@ export default function Sales() {
       date,
     });
 
-    // Update or create customer record (totals)
+    // ✅ Bill dikhane ke liye id set karo
+    setShowBillFor(txId);
+
+    // -------------------- Customer Update --------------------
     const normalizePhone = (phone) =>
       (phone || "").replace(/\D/g, "").trim() || "NA";
     const phoneB = normalizePhone(customerInfo.contactPhone);
@@ -177,7 +154,7 @@ export default function Sales() {
       });
     }
 
-    // reset UI
+    // -------------------- Reset UI --------------------
     setCart([]);
     setCustomerInfo({
       name: "",
@@ -189,13 +166,16 @@ export default function Sales() {
     setPaidAmount("");
   };
 
+  // -------------------- Delete Transaction --------------------
+  // ✅ FIX: ab sale SalesContext se delete hoga, local state se nahi
   const handleDeleteTx = (txId) => {
     if (!window.confirm("Delete this transaction?")) return;
-    setTransactions((t) => t.filter((tx) => tx.id !== txId));
+    const updated = sales.filter((s) => s.id !== txId);
+    updateSalePayment(updated);
     if (showBillFor === txId) setShowBillFor(null);
   };
 
-  // WhatsApp share text (uses sellingPrice and per-item totals)
+  // -------------------- WhatsApp Share --------------------
   const shareBillOnWhatsApp = (tx) => {
     const text = `🧾 Bill for ${tx.customer}
 Date: ${tx.date}
@@ -208,21 +188,24 @@ ${tx.items
       .join("\n")}
 
 SubTotal: ₹${tx.items
-      .reduce((s, it) => s + (it.netPrice || it.quantity * it.sellingPrice || 0), 0)
+      .reduce(
+        (s, it) => s + (it.netPrice || it.quantity * it.sellingPrice || 0),
+        0
+      )
       .toFixed(2)}
 Total: ₹${tx.total}
 Paid: ₹${tx.paid}
 Pending: ₹${tx.pending}
 
-📍 Address: ${tx.customerInfo.billingAddress || "N/A"}
-📦 Shipping: ${tx.customerInfo.shippingAddress || "N/A"}
-📞 Phone: ${tx.customerInfo.contactPhone || "N/A"}
-GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
+📍 Address: ${tx.customerInfo?.billingAddress || "N/A"}
+📦 Shipping: ${tx.customerInfo?.shippingAddress || "N/A"}
+📞 Phone: ${tx.customerInfo?.contactPhone || "N/A"}
+GSTIN: ${tx.customerInfo?.gstin || "N/A"}`;
 
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   };
 
-  // Download invoice PDF
+  // -------------------- PDF Download --------------------
   const downloadBillPDF = (tx) => {
     const el = document.getElementById(`bill_${tx.id}`);
     if (!el) return;
@@ -240,7 +223,49 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       .catch((err) => console.error(err));
   };
 
-  const totalSales = transactions.reduce((sum, tx) => sum + (tx.total || 0), 0);
+  // ✅ FIX: totalSales ab SalesContext ke sales se calculate hoga
+  const totalSales = useMemo(
+    () => sales.reduce((sum, s) => sum + (parseFloat(s.total) || 0), 0),
+    [sales]
+  );
+
+  // ✅ FIX: BillPreview ke liye sales ko grouped transactions mein convert karo
+  // SalesContext mein sales per-item hain, BillPreview ko grouped tx chahiye
+  const groupedTransactions = useMemo(() => {
+    const map = {};
+    sales.forEach((s) => {
+      // txId Sale.jsx se pass kiya tha addSale mein — lekin SalesContext entries split karta hai
+      // isliye date+customer key se group karte hain
+      const key = `${s.date}_${s.customer}`;
+      if (!map[key]) {
+        map[key] = {
+          id: s.id, // pehli entry ka id use karo BillPreview ke liye
+          customer: s.customer,
+          customerInfo: s.customerInfo || {},
+          date: s.date,
+          items: [],
+          total: 0,
+          paid: 0,
+          pending: 0,
+        };
+      }
+      map[key].items.push({
+        product: s.product,
+        quantity: s.quantity,
+        sellingPrice: s.sellingPrice,
+        discount: s.discount,
+        gst: s.gst,
+        netPrice: s.netPrice,
+        discountAmount: s.discountAmt,
+        gstAmount: s.gstAmt,
+        total: s.total,
+      });
+      map[key].total += s.total || 0;
+      map[key].paid += s.paid || 0;
+      map[key].pending += s.pending || 0;
+    });
+    return Object.values(map);
+  }, [sales]);
 
   return (
     <div className="container py-4 pb-5">
@@ -277,12 +302,20 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       </motion.div>
 
       {/* Customer Form */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.35 }}
+      >
         <CustomerForm />
       </motion.div>
 
       {/* Product Form */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.45 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.45 }}
+      >
         <ProductForm
           product={product}
           setProduct={setProduct}
@@ -300,7 +333,11 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       </motion.div>
 
       {/* Cart Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.55 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.55 }}
+      >
         <CartTable
           cart={cart}
           removeFromCart={removeFromCart}
@@ -309,7 +346,12 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       </motion.div>
 
       {/* Paid Amount Input */}
-      <motion.div className="mb-3" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.6 }}>
+      <motion.div
+        className="mb-3"
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.6 }}
+      >
         <input
           type="number"
           className="form-control shadow-sm"
@@ -320,21 +362,29 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       </motion.div>
 
       {/* Bill Preview */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.7 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.7 }}
+      >
         <BillPreview
           shareBillOnWhatsApp={shareBillOnWhatsApp}
           downloadBillPDF={downloadBillPDF}
           setShowBillFor={setShowBillFor}
           showBillFor={showBillFor}
-          transactions={transactions}
-          tx={transactions.find((t) => t.id === showBillFor)}
+          transactions={groupedTransactions}
+          tx={groupedTransactions.find((t) => t.id === showBillFor)}
         />
       </motion.div>
 
       {/* Transactions Table */}
-      <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.8 }}>
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.8 }}
+      >
         <SaleTransactions
-          transactions={transactions}
+          transactions={groupedTransactions}
           onView={setShowBillFor}
           onDelete={handleDeleteTx}
         />

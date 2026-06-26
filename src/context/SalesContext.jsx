@@ -12,7 +12,7 @@ export const SalesProvider = ({ children }) => {
       const raw = localStorage.getItem("sales");
       const data = raw ? JSON.parse(raw) : [];
       return Array.isArray(data)
-        ? data.sort((a, b) => new Date(b.date) - new Date(a.date)) // ✅ Sort latest first
+        ? data.sort((a, b) => new Date(b.date) - new Date(a.date))
         : [];
     } catch {
       return [];
@@ -34,9 +34,16 @@ export const SalesProvider = ({ children }) => {
   const addSale = (saleData) => {
     if (!saleData || !saleData.items || saleData.items.length === 0) return;
 
+    // ✅ FIX: customerName properly define kiya
+    const customerName =
+      saleData.customer?.trim() ||
+      saleData.customerInfo?.name?.trim() ||
+      "Unknown";
+
     const calculateRow = (it) => {
       const qty = Number(it.qty ?? it.quantity) || 0;
-      const sellingPrice = Number(it.sellingPrice ?? it.unitPrice ?? it.price) || 0;
+      const sellingPrice =
+        Number(it.sellingPrice ?? it.unitPrice ?? it.price) || 0;
       const discount = Number(it.discount) || 0;
       const gst = Number(it.gst) || 0;
 
@@ -82,10 +89,7 @@ export const SalesProvider = ({ children }) => {
 
       return {
         id: Date.now() + Math.random(),
-        customer:
-          saleData.customer?.trim() ||
-          saleData.customerInfo?.name?.trim() ||
-          "Unknown",
+        customer: customerName,
         customerInfo: { ...saleData.customerInfo },
         product: it.product?.trim() || "Unnamed",
         quantity: qty,
@@ -105,46 +109,32 @@ export const SalesProvider = ({ children }) => {
     // ✅ Add new sales entries (latest first)
     setSales((prev) => [...entries, ...prev]);
 
-    // ✅ Update customer ledger
-
-   updateCustomerLedger(customerName, {
-  totalPurchase: totalSaleAmount,
-  paidAmount: paid,
-  pendingAmount: totalSaleAmount - paid,
-  contactPhone: saleData.customerInfo?.contactPhone || "",
-  billingAddress: saleData.customerInfo?.billingAddress || "",
-  shippingAddress: saleData.customerInfo?.shippingAddress || "",
-  gstin: saleData.customerInfo?.gstin || "",
-});
-
-  //   updateCustomerLedger(
-  //     saleData.customer?.trim() || saleData.customerInfo?.name?.trim() || "Unknown",
-  //     paid
-  //   );
+    // ✅ FIX: customerName ab properly pass ho raha hai
+    updateCustomerLedger(customerName, {
+      totalPurchase: totalSaleAmount,
+      paidAmount: paid,
+      pendingAmount: totalSaleAmount - paid,
+    }, {
+      contactPhone: saleData.customerInfo?.contactPhone || "",
+      billingAddress: saleData.customerInfo?.billingAddress || "",
+      shippingAddress: saleData.customerInfo?.shippingAddress || "",
+      gstin: saleData.customerInfo?.gstin || "",
+    });
   };
 
   // -------------------- Update Sale Payment --------------------
   const updateSalePayment = (updatedSales) => {
-    // ✅ Keep latest transactions on top
     const sorted = [...updatedSales].sort(
       (a, b) => new Date(b.date) - new Date(a.date)
     );
     setSales(sorted);
-
-    const ledgerMap = {};
-    sorted.forEach((s) => {
-      if (!ledgerMap[s.customer]) ledgerMap[s.customer] = 0;
-      ledgerMap[s.customer] += s.paid;
-    });
-
-    Object.keys(ledgerMap).forEach((custName) => {
-      updateCustomerLedger(custName, ledgerMap[custName]);
-    });
   };
 
   // -------------------- Persist to localStorage --------------------
   useEffect(() => {
-    const sorted = [...sales].sort((a, b) => new Date(b.date) - new Date(a.date));
+    const sorted = [...sales].sort(
+      (a, b) => new Date(b.date) - new Date(a.date)
+    );
     localStorage.setItem("sales", JSON.stringify(sorted));
   }, [sales]);
 
