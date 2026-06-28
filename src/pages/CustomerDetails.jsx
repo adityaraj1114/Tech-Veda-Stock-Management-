@@ -22,18 +22,16 @@ export default function CustomerDetails() {
   const [currentPage, setCurrentPage] = useState(1);
   const pageSize = 20;
 
-  // const cust = customers.find((c) => String(c.id) === String(id));
-  // if (!cust) return <p className="text-danger">Customer not found 🚫</p>;
-
   const cust =
-  location.state ||
-  customers.find((c) => String(c.id) === String(id));
+    location.state ||
+    customers.find((c) => String(c.id) === String(id));
 
-if (!cust) {
-  return <p className="text-danger">Customer not found 🚫</p>;
-}
+  if (!cust) {
+    return <p className="text-danger">Customer not found 🚫</p>;
+  }
 
-  // ✅ Group sales by transaction (customer + date) with proper discount & GST
+  // ✅ FIX: Group sales by transaction (customer + date)
+  // SalesContext fields: gstAmt (not gstRate), discountAmt (absolute ₹, not %)
   const customerSales = useMemo(() => {
     const grouped = [];
     const map = {};
@@ -49,8 +47,7 @@ if (!cust) {
             customer: cust.name,
             items: [],
             subtotal: 0,
-            discount: 0,
-            gstRate: s.gstRate || 0,
+            discountAmount: 0,  // ✅ absolute ₹ amount
             gstAmount: 0,
             totalAmount: 0,
             paid: 0,
@@ -60,31 +57,32 @@ if (!cust) {
           grouped.push(map[txKey]);
         }
 
-        const qty = Number(s.quantity || 0);
-        const unitPrice = Number(s.sellingPrice || s.unitPrice || 0);
-        const itemDiscount = Number(s.discount || 0); // ✅ use as absolute value
-        const gstPct = Number(s.gstRate || 0);
+        const qty        = Number(s.quantity || 0);
+        const unitPrice  = Number(s.sellingPrice || s.unitPrice || 0);
 
-        const itemSubtotal = qty * unitPrice;
-        const afterDiscount = itemSubtotal - itemDiscount;
-        const itemGst = (gstPct / 100) * afterDiscount;
-        const itemTotal = afterDiscount + itemGst;
+        // ✅ FIX: SalesContext saves "discountAmt" (absolute ₹) and "gstAmt" (absolute ₹)
+        const itemDiscountAmt = Number(s.discountAmt || 0);
+        const itemGstAmt      = Number(s.gstAmt      || 0);
+        const itemSubtotal    = qty * unitPrice;
+        const itemTotal       = Number(s.total || 0); // already computed by SalesContext
 
         map[txKey].items.push({
-          product: s.product,
-          quantity: qty,
+          product:      s.product,
+          quantity:     qty,
           unitPrice,
-          discount: itemDiscount,
-          gst: itemGst,
-          total: itemTotal,
+          discount:     s.discount    || 0,   // % — for display in bill
+          gst:          s.gst         || 0,   // % — for display in bill
+          discountAmt:  itemDiscountAmt,       // ₹
+          gstAmt:       itemGstAmt,            // ₹
+          total:        itemTotal,
         });
 
-        map[txKey].subtotal += itemSubtotal;
-        map[txKey].discount += itemDiscount;
-        map[txKey].gstAmount += itemGst;
-        map[txKey].totalAmount += itemTotal;
-        map[txKey].paid += s.paid || 0;
-        map[txKey].pending += itemTotal - (s.paid || 0);
+        map[txKey].subtotal        += itemSubtotal;
+        map[txKey].discountAmount  += itemDiscountAmt;
+        map[txKey].gstAmount       += itemGstAmt;
+        map[txKey].totalAmount     += itemTotal;
+        map[txKey].paid            += Number(s.paid    || 0);
+        map[txKey].pending         += Number(s.pending || 0);
       });
 
     return grouped;
@@ -104,20 +102,17 @@ if (!cust) {
     return filteredSales.slice(start, start + pageSize);
   }, [filteredSales, currentPage]);
 
-  // ✅ Totals
-  const totalPurchased = customerSales.reduce(
-    (sum, s) => sum + s.totalAmount,
-    0
-  );
-  const totalPaid = customerSales.reduce((sum, s) => sum + (s.paid || 0), 0);
-  const totalPending = totalPurchased - totalPaid;
+  // ✅ Overall totals (use pre-computed totalAmount — no recalculation needed)
+  const totalPurchased = customerSales.reduce((sum, s) => sum + s.totalAmount, 0);
+  const totalPaid      = customerSales.reduce((sum, s) => sum + (s.paid || 0), 0);
+  const totalPending   = totalPurchased - totalPaid;
 
   const displayInfo = {
-    name: cust.name,
-    billingAddress: cust.billingAddress || "— Not Provided",
+    name:            cust.name,
+    billingAddress:  cust.billingAddress  || "— Not Provided",
     shippingAddress: cust.shippingAddress || "— Not Provided",
-    contactPhone: cust.contactPhone || "— Not Provided",
-    gstin: cust.gstin || "— Not Provided",
+    contactPhone:    cust.contactPhone    || "— Not Provided",
+    gstin:           cust.gstin           || "— Not Provided",
   };
 
   // ✅ Notify on WhatsApp
@@ -127,18 +122,8 @@ if (!cust) {
       return;
     }
     const phone = cust.contactPhone.replace(/\D/g, "");
-    const message = `Hello ${cust.name},
-
-Here is your account summary:
-Total Purchased: ₹${totalPurchased.toFixed(2)}
-Paid: ₹${totalPaid.toFixed(2)}
-Pending: ₹${totalPending.toFixed(2)}
-
-Thank you!`;
-    window.open(
-      `https://wa.me/${phone}?text=${encodeURIComponent(message)}`,
-      "_blank"
-    );
+    const message = `Hello ${cust.name},\n\nHere is your account summary:\nTotal Purchased: ₹${totalPurchased.toFixed(2)}\nPaid: ₹${totalPaid.toFixed(2)}\nPending: ₹${totalPending.toFixed(2)}\n\nThank you!`;
+    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   // ✅ Record Payment
@@ -149,8 +134,7 @@ Thank you!`;
 
       const updatedSales = sales.map((s) => {
         if (s.customer !== cust.name) return s;
-
-        const pending = (s.totalAmount || s.total) - (s.paid || 0);
+        const pending = Number(s.pending || 0);
         if (pending <= 0) return s;
 
         const payNow = remaining >= pending ? pending : remaining;
@@ -158,7 +142,7 @@ Thank you!`;
 
         return {
           ...s,
-          paid: parseFloat(((s.paid || 0) + payNow).toFixed(2)),
+          paid:    parseFloat(((s.paid || 0) + payNow).toFixed(2)),
           pending: parseFloat((pending - payNow).toFixed(2)),
         };
       });
@@ -174,7 +158,7 @@ Thank you!`;
   // ✅ Delete Transaction
   const handleDeleteTx = (txKey) => {
     if (!window.confirm("Delete this entire transaction?")) return;
-    const [date, customerId] = txKey.split("_");
+    const [date] = txKey.split("_");
     const updated = sales.filter(
       (s) => !(s.customer === cust.name && s.date === date)
     );
@@ -187,16 +171,14 @@ Thank you!`;
 Date: ${tx.date}
 
 ${tx.items
-  .map(
-    (it, i) =>
-      `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice} 
-Discount: ₹${it.discount.toFixed(2)} GST: ₹${it.gst.toFixed(2)} 
-= ₹${it.total.toFixed(2)}`
-  )
-  .join("\n")}
+      .map(
+        (it, i) =>
+          `${i + 1}. ${it.product} x${it.quantity} @₹${it.unitPrice}\nDiscount: ₹${it.discountAmt.toFixed(2)}  GST: ₹${it.gstAmt.toFixed(2)}\n= ₹${it.total.toFixed(2)}`
+      )
+      .join("\n")}
 
 Subtotal: ₹${tx.subtotal.toFixed(2)}
-Total Discount: ₹${tx.discount.toFixed(2)}
+Total Discount: ₹${tx.discountAmount.toFixed(2)}
 GST: ₹${tx.gstAmount.toFixed(2)}
 Total: ₹${tx.totalAmount.toFixed(2)}
 Paid: ₹${tx.paid.toFixed(2)}
@@ -221,23 +203,19 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
       html2canvas: { scale: 2 },
       jsPDF: { unit: "in", format: "a4", orientation: "portrait" },
     };
-    html2pdf()
-      .set(opt)
-      .from(el)
-      .save()
-      .catch((err) => console.error(err));
+    html2pdf().set(opt).from(el).save().catch((err) => console.error(err));
   };
 
-  // ✅ Export CSV & Excel
+  // ✅ Export CSV
   const exportCSV = () => {
     const data = filteredSales.map((tx) => ({
-      Date: tx.date,
-      Subtotal: tx.subtotal.toFixed(2),
-      Discount: tx.discount.toFixed(2),
-      GST: tx.gstAmount.toFixed(2),
-      Total: tx.totalAmount.toFixed(2),
-      Paid: tx.paid.toFixed(2),
-      Pending: tx.pending.toFixed(2),
+      Date:         tx.date,
+      Subtotal:     tx.subtotal.toFixed(2),
+      "Discount(₹)":tx.discountAmount.toFixed(2),
+      "GST(₹)":     tx.gstAmount.toFixed(2),
+      Total:        tx.totalAmount.toFixed(2),
+      Paid:         tx.paid.toFixed(2),
+      Pending:      tx.pending.toFixed(2),
     }));
     saveAs(
       new Blob([Papa.unparse(data)], { type: "text/csv;charset=utf-8;" }),
@@ -245,18 +223,19 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
     );
   };
 
+  // ✅ Export Excel
   const exportExcel = () => {
     const data = filteredSales.map((tx) => ({
-      Date: tx.date,
-      Subtotal: tx.subtotal.toFixed(2),
-      Discount: tx.discount.toFixed(2),
-      GST: tx.gstAmount.toFixed(2),
-      Total: tx.totalAmount.toFixed(2),
-      Paid: tx.paid.toFixed(2),
-      Pending: tx.pending.toFixed(2),
+      Date:         tx.date,
+      Subtotal:     tx.subtotal.toFixed(2),
+      "Discount(₹)":tx.discountAmount.toFixed(2),
+      "GST(₹)":     tx.gstAmount.toFixed(2),
+      Total:        tx.totalAmount.toFixed(2),
+      Paid:         tx.paid.toFixed(2),
+      Pending:      tx.pending.toFixed(2),
     }));
     const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
+    const workbook  = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Transactions");
     saveAs(
       new Blob([XLSX.write(workbook, { bookType: "xlsx", type: "array" })], {
@@ -272,7 +251,6 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         className="card shadow p-1 rounded-4"
         style={{
           background: "linear-gradient(135deg, #252425ff 0%, #353534ff 40%, #f2fb74ff 100%)",
-          // background: "linear-gradient(135deg, #a0f2fbff 0%, #fbd6f6ff 100%)",
           backdropFilter: "blur(12px)",
           border: "1px solid rgba(255, 255, 255, 0.2)",
         }}
@@ -297,21 +275,13 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
           <h4 className="text-primary pb-1 text-center">
             <b>{displayInfo.name}</b>
           </h4>
-          <p>
-            🏠 <strong>Billing Address:</strong> {displayInfo.billingAddress}
-          </p>
-          <p>
-            📦 <strong>Shipping Address:</strong> {displayInfo.shippingAddress}
-          </p>
-          <p>
-            📞 <strong>Phone:</strong> <b>{displayInfo.contactPhone}</b>
-          </p>
-          <p>
-            🧾 <strong>GSTIN:</strong> {displayInfo.gstin}
-          </p>
+          <p>🏠 <strong>Billing Address:</strong> {displayInfo.billingAddress}</p>
+          <p>📦 <strong>Shipping Address:</strong> {displayInfo.shippingAddress}</p>
+          <p>📞 <strong>Phone:</strong> <b>{displayInfo.contactPhone}</b></p>
+          <p>🧾 <strong>GSTIN:</strong> {displayInfo.gstin}</p>
         </motion.div>
 
-        {/* Summary */}
+        {/* Summary Card */}
         <motion.div
           className="row mb-4"
           initial={{ opacity: 0 }}
@@ -322,8 +292,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
             <motion.div
               className="border p-3 rounded bg-white shadow-sm"
               style={{
-                background:
-                  "linear-gradient(135deg, #6ae4faff 0%, #e1ff75ff 100%)",
+                background: "linear-gradient(135deg, #6ae4faff 0%, #e1ff75ff 100%)",
                 backdropFilter: "blur(12px)",
                 border: "1px solid rgba(255, 255, 255, 0.2)",
               }}
@@ -331,45 +300,26 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
               animate={{ opacity: 1 }}
               transition={{ delay: 0.3 }}
             >
-              {/** Calculate totals correctly */}
-              {(() => {
-                let totalPurchased = 0;
-                let totalPaid = 0;
-
-                filteredSales.forEach((b) => {
-                  const discountAmount = (b.subtotal * (b.discount || 0)) / 100;
-                  const total = b.subtotal - discountAmount + b.gstAmount;
-                  totalPurchased += total;
-                  totalPaid += b.paid || 0;
-                });
-
-                const totalPending = totalPurchased - totalPaid;
-
-                return (
-                  <>
-                    <p className="fs-5 text-dark pt-2 pb-2 m-2">
-                      <strong>Total Purchased:</strong> ₹
-                      {totalPurchased.toFixed(2)}
-                    </p>
-                    <p className="fs-5 text-green pt-2 pb-2 m-2">
-                      <strong>Paid:</strong> ₹{totalPaid.toFixed(2)}
-                    </p>
-                    <p className="fs-5 text-dark pt-2 pb-2 m-2">
-                      <strong>Pending:</strong>{" "}
-                      <span className="text-danger fw-bold">
-                        ₹{totalPending.toFixed(2)}
-                      </span>
-                    </p>
-                  </>
-                );
-              })()}
+              {/* ✅ FIX: Direct totalAmount use karo — no wrong recalculation */}
+              <p className="fs-5 text-dark pt-2 pb-2 m-2">
+                <strong>Total Purchased:</strong> ₹{totalPurchased.toFixed(2)}
+              </p>
+              <p className="fs-5 text-dark pt-2 pb-2 m-2">
+                <strong>Paid:</strong> ₹{totalPaid.toFixed(2)}
+              </p>
+              <p className="fs-5 text-dark pt-2 pb-2 m-2">
+                <strong>Pending:</strong>{" "}
+                <span className="text-danger fw-bold">
+                  ₹{totalPending.toFixed(2)}
+                </span>
+              </p>
             </motion.div>
 
             {totalPending > 0 && (
               <div className="mt-3 px-5">
                 <button
                   className="btn btn-success w-100 text-white fw-bold"
-                  style={{background: "linear-gradient(90deg, #fa5fe5ff, #2575fc)"}}
+                  style={{ background: "linear-gradient(90deg, #fa5fe5ff, #2575fc)" }}
                   onClick={handleRecordPayment}
                 >
                   💵 Record Payment
@@ -380,7 +330,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
             <div className="mt-3 px-5">
               <button
                 className="btn btn-success w-100 text-dark fw-bold"
-                style={{background: "linear-gradient(90deg, #2cf85fff, #1df3afff)"}}
+                style={{ background: "linear-gradient(90deg, #2cf85fff, #1df3afff)" }}
                 onClick={notifyOnWhatsApp}
               >
                 📲 Notify on WhatsApp
@@ -390,7 +340,6 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         </motion.div>
 
         {/* Bill Preview Modal */}
-
         <div className="p-0">
           {showBillFor && (
             <BillPreview
@@ -405,9 +354,10 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
         </div>
 
         {/* Transactions Table */}
-        <h3 className="mt-4 mb-3 px-3 text-dark text-center mb-2">
+        <h3 className="mt-4 mb-3 px-3 text-dark text-center">
           <b>📑 Transactions</b>
         </h3>
+
         <div className="row g-2 mb-2">
           <div className="col-md-auto d-flex align-items-center gap-2">
             <div className="col-md-4">
@@ -457,95 +407,45 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
                 </tr>
               </thead>
               <tbody>
-                {paginatedSales.map((bill, i) => {
-                  const discountAmount =
-                    (bill.subtotal * (bill.discount || 0)) / 100;
-                  const totalAmount =
-                    bill.subtotal - discountAmount + bill.gstAmount;
-                  const pendingAmount = totalAmount - bill.paid;
-
-                  return (
-                    <tr key={bill.id}>
-                      <td>{(currentPage - 1) * pageSize + i + 1}</td>
-                      <td>{bill.date}</td>
-                      <td>₹{bill.subtotal.toFixed(2)}</td>
-                      <td>₹{discountAmount.toFixed(2)}</td>
-                      <td>₹{bill.gstAmount.toFixed(2)}</td>
-                      <td>₹{totalAmount.toFixed(2)}</td>
-                      <td className="text-success">₹{bill.paid.toFixed(2)}</td>
-                      <td className="text-danger">
-                        ₹{pendingAmount.toFixed(2)}
-                      </td>
-                      <td className="d-flex gap-2">
-                        <button
-                          className="btn btn-sm btn-outline-info"
-                          onClick={() => setShowBillFor(bill.id)}
-                        >
-                          View
-                        </button>
-                        <button
-                          className="btn btn-sm btn-outline-danger"
-                          onClick={() => handleDeleteTx(bill.id)}
-                        >
-                          Delete
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
+                {paginatedSales.map((bill, i) => (
+                  // ✅ FIX: Direct pre-computed values use karo — no recalculation
+                  <tr key={bill.id}>
+                    <td>{(currentPage - 1) * pageSize + i + 1}</td>
+                    <td>{bill.date}</td>
+                    <td>₹{bill.subtotal.toFixed(2)}</td>
+                    <td>₹{bill.discountAmount.toFixed(2)}</td>
+                    <td>₹{bill.gstAmount.toFixed(2)}</td>
+                    <td>₹{bill.totalAmount.toFixed(2)}</td>
+                    <td className="text-success">₹{bill.paid.toFixed(2)}</td>
+                    <td className="text-danger">₹{bill.pending.toFixed(2)}</td>
+                    <td className="d-flex gap-2">
+                      <button
+                        className="btn btn-sm btn-outline-info"
+                        onClick={() => setShowBillFor(bill.id)}
+                      >
+                        View
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={() => handleDeleteTx(bill.id)}
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                ))}
               </tbody>
+
+              {/* ✅ FIX: Footer totals bhi direct pre-computed values se */}
               <tfoot className="table-secondary fw-bold">
                 <tr>
-                  <td colSpan={2} className="text-end">
-                    TOTAL
-                  </td>
-                  <td>
-                    ₹
-                    {filteredSales
-                      .reduce((sum, b) => sum + b.subtotal, 0)
-                      .toFixed(2)}
-                  </td>
-                  <td>
-                    ₹
-                    {filteredSales
-                      .reduce(
-                        (sum, b) =>
-                          sum + (b.subtotal * (b.discount || 0)) / 100,
-                        0
-                      )
-                      .toFixed(2)}
-                  </td>
-                  <td>
-                    ₹
-                    {filteredSales
-                      .reduce((sum, b) => sum + b.gstAmount, 0)
-                      .toFixed(2)}
-                  </td>
-                  <td>
-                    ₹
-                    {filteredSales
-                      .reduce((sum, b) => {
-                        const discount = (b.subtotal * (b.discount || 0)) / 100;
-                        return sum + (b.subtotal - discount + b.gstAmount);
-                      }, 0)
-                      .toFixed(2)}
-                  </td>
-                  <td className="text-success">
-                    ₹
-                    {filteredSales
-                      .reduce((sum, b) => sum + b.paid, 0)
-                      .toFixed(2)}
-                  </td>
-                  <td className="text-danger">
-                    ₹
-                    {filteredSales
-                      .reduce((sum, b) => {
-                        const discount = (b.subtotal * (b.discount || 0)) / 100;
-                        const total = b.subtotal - discount + b.gstAmount;
-                        return sum + (total - b.paid);
-                      }, 0)
-                      .toFixed(2)}
-                  </td>
+                  <td colSpan={2} className="text-end">TOTAL</td>
+                  <td>₹{filteredSales.reduce((sum, b) => sum + b.subtotal, 0).toFixed(2)}</td>
+                  <td>₹{filteredSales.reduce((sum, b) => sum + b.discountAmount, 0).toFixed(2)}</td>
+                  <td>₹{filteredSales.reduce((sum, b) => sum + b.gstAmount, 0).toFixed(2)}</td>
+                  <td>₹{filteredSales.reduce((sum, b) => sum + b.totalAmount, 0).toFixed(2)}</td>
+                  <td className="text-success">₹{filteredSales.reduce((sum, b) => sum + b.paid, 0).toFixed(2)}</td>
+                  <td className="text-danger">₹{filteredSales.reduce((sum, b) => sum + b.pending, 0).toFixed(2)}</td>
                   <td>—</td>
                 </tr>
               </tfoot>
@@ -560,9 +460,7 @@ GSTIN: ${tx.customerInfo.gstin || "N/A"}`;
                 >
                   ⬅️ Previous
                 </button>
-                <span>
-                  Page {currentPage} of {totalPages}
-                </span>
+                <span>Page {currentPage} of {totalPages}</span>
                 <button
                   className="btn btn-outline-secondary"
                   disabled={currentPage === totalPages}

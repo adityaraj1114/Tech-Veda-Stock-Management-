@@ -12,10 +12,10 @@ import Sale from "./pages/Sale";
 import Profile from "./pages/Profile";
 import CustomerList from "./pages/CustomerList";
 import FooterNav from "./components/FooterNav";
-// import SellerList from "./pages/SellerList";
 import CustomerDetails from "./pages/CustomerDetails";
 import ProfitLossReport from "./pages/ProfitLossReport";
 import CustomerCatalog from "./pages/CustomerCatalog";
+import RetailSellPage from "./pages/RetailSellPage";
 
 import PrivateRoute from "./routes/PrivateRoute";
 
@@ -27,7 +27,9 @@ import { SalesProvider, useSales } from "./context/SalesContext";
 import { PurchaseProvider, usePurchase } from "./context/PurchaseContext";
 import { InventoryProvider } from "./context/InventoryContext";
 import { CustomerCatalogProvider } from "./context/CustomerCatalogContext";
-import RetailSellPage from "./pages/RetailSellPage";
+
+// Pages jinpe Navbar aur FooterNav nahi dikhna chahiye
+const PUBLIC_PATHS = ["/login", "/signup", "/customerCatalog"];
 
 // ✅ Wrapper to pass sales & purchases into InventoryProvider
 function AppProviders({ children }) {
@@ -42,10 +44,8 @@ function AppProviders({ children }) {
 }
 
 function AppRoutes() {
-  const location = useLocation(); // 👈 Track current route
-
   return (
-    <Routes location={location} key={location.pathname}>
+    <Routes>
       {/* Public Routes */}
       <Route path="/signup" element={<Signup />} />
       <Route path="/login" element={<Login />} />
@@ -61,7 +61,15 @@ function AppRoutes() {
         }
       />
 
-      <Route path="/profit-loss" element={<ProfitLossReport />} />
+      {/* ✅ FIX: profit-loss ab PrivateRoute se protected hai */}
+      <Route
+        path="/profit-loss"
+        element={
+          <PrivateRoute>
+            <ProfitLossReport />
+          </PrivateRoute>
+        }
+      />
 
       <Route
         path="/profile"
@@ -71,7 +79,6 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
-
 
       <Route
         path="/stock"
@@ -90,15 +97,6 @@ function AppRoutes() {
           </PrivateRoute>
         }
       />
-
-      {/* <Route
-        path="/sellerlist"
-        element={
-          <PrivateRoute>
-            <SellerList />
-          </PrivateRoute>
-        }
-      /> */}
 
       <Route
         path="/customers/:id"
@@ -143,6 +141,11 @@ function AppRoutes() {
 }
 
 function App() {
+  const location = useLocation();
+
+  // Navbar aur FooterNav public pages pe nahi dikhenge
+  const isPublicPage = PUBLIC_PATHS.includes(location.pathname);
+
   return (
     <AuthProvider>
       <CustomerCatalogProvider>
@@ -151,15 +154,14 @@ function App() {
             <SalesProvider>
               <PurchaseProvider>
                 <AppProviders>
-                  <Navbar />
+                  {!isPublicPage && <Navbar />}
                   <div
                     className="container p-0"
-                    style={{ paddingBottom: "80px" }}
+                    style={{ paddingBottom: isPublicPage ? "0px" : "80px" }}
                   >
-                    {/* paddingBottom to avoid content hidden behind FooterNav */}
                     <AppRoutes />
                   </div>
-                  <FooterNav />
+                  {!isPublicPage && <FooterNav />}
                 </AppProviders>
               </PurchaseProvider>
             </SalesProvider>
